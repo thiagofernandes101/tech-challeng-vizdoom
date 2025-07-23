@@ -10,14 +10,14 @@ from itertools import product
 
 # --- Parâmetros da População ---
 POPULATION_SIZE = 100  # Tamanho da população (100 indivíduos)
-GENOME_LENGTH = 1000   # Número máximo de ações por episódio (duração da "vida" do agente)
+GENOME_LENGTH = 500   # Número máximo de ações por episódio (duração da "vida" do agente)
 
 # --- Pesos da Função de Fitness (Ajuste estes valores para guiar a evolução!) ---
 # O objetivo é maximizar essa pontuação
 W_KILLS = 150.0      # Peso para cada inimigo morto
-W_HEALTH = 1.0       # Peso para cada ponto de vida restante
-W_AMMO = 0.2         # Peso para cada ponto de munição restante
-W_STEPS = -0.5       # Penalidade por passo dado (incentiva a terminar rápido)
+W_HEALTH = 50.0       # Peso para cada ponto de vida restante
+W_AMMO = 10         # Peso para cada ponto de munição restante
+W_STEPS = 0.0       # Penalidade por passo dado (incentiva a terminar rápido)
 
 # --- Parâmetros dos Operadores Genéticos ---
 TOURNAMENT_SIZE = 3     # Número de indivíduos que competem em cada torneio de seleção
@@ -26,7 +26,7 @@ ELITISM_COUNT = 1       # Número de melhores indivíduos a serem passados diret
 
 # --- Parâmetros de Critério de Parada ---
 MAX_GENERATIONS = 999999    # O número máximo de gerações que o algoritmo irá executar
-STAGNATION_LIMIT = 10000    # N: O número de gerações sem melhoria antes de parar
+STAGNATION_LIMIT = 700    # N: O número de gerações sem melhoria antes de parar
 IMPROVEMENT_THRESHOLD = 0.1 # A melhoria mínima no fitness para ser considerada "significativa"
 
 # --- Configuração do ViZDoom ---
@@ -47,14 +47,9 @@ def initialize_game():
     game.set_mode(vzd.Mode.PLAYER)
     game.set_available_buttons([
         vzd.Button.ATTACK,
-        vzd.Button.MOVE_LEFT,
-        vzd.Button.MOVE_RIGHT,
         vzd.Button.MOVE_FORWARD,
-        vzd.Button.MOVE_BACKWARD,
         vzd.Button.TURN_LEFT,
-        vzd.Button.TURN_RIGHT,
-        vzd.Button.MOVE_UP,
-        vzd.Button.MOVE_DOWN
+        vzd.Button.TURN_RIGHT
     ])
     game.init()
     
@@ -110,26 +105,23 @@ def calculate_fitness(game, individual, actions):
         game.make_action(action_to_perform)  # Corrigido: Removido os colchetes extras
 
     # Coleta os resultados no final do episódio
-    if game.is_episode_finished():
-        # Se o episódio terminou (morreu ou completou), coletamos os dados finais
-        kills = game.get_game_variable(vzd.GameVariable.KILLCOUNT)
-        health = game.get_game_variable(vzd.GameVariable.HEALTH)
-        ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
-        steps_taken = game.get_episode_time()
-    else:
-        # Se o episódio não terminou (atingiu o limite de ações), o agente está "vivo"
-        # mas pode não ter feito nada útil.
-        kills = game.get_game_variable(vzd.GameVariable.KILLCOUNT)
-        health = game.get_game_variable(vzd.GameVariable.HEALTH)
-        ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
-        steps_taken = GENOME_LENGTH
+    kills = game.get_game_variable(vzd.GameVariable.KILLCOUNT)
+    health = game.get_game_variable(vzd.GameVariable.HEALTH)
+    ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
+    steps_taken = GENOME_LENGTH
+
+    bonus = 0.0
+    if game.is_episode_finished() and game.get_game_variable(vzd.GameVariable.DEAD) == 0:
+        # Bonificação proporcional ao número de inimigos mortos
+        bonus = (kills * 10.0) + (health * 5.0) + (ammo * 5.0)
 
     # Aplica a fórmula de fitness com os pesos definidos
     fitness_score = (W_KILLS * kills) + \
                     (W_HEALTH * health) + \
                     (W_AMMO * ammo) + \
-                    (W_STEPS * steps_taken)
-                    
+                    (W_STEPS * steps_taken) + \
+                    bonus
+
     return fitness_score
 
 def tournament_selection(population):
@@ -258,7 +250,7 @@ if __name__ == "__main__":
             generations_without_improvement = 0
             print(f"✨ Nova melhoria significativa encontrada! Melhor fitness geral: {best_fitness_overall:.2f}")
             # Salvar o melhor indivíduo pode ser uma boa ideia aqui
-            # np.save('best_genome.npy', sorted_population[0]['genome'])
+            np.save('best_genome.npy', sorted_population[0]['genome'])
         else:
             generations_without_improvement += 1
             print(f"Sem melhoria significativa. Gerações estagnadas: {generations_without_improvement}/{STAGNATION_LIMIT}")
