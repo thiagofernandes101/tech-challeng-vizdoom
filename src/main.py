@@ -1,8 +1,13 @@
+from typing import List
 import vizdoom as vzd
 import numpy as np
 import random
 import time
 from itertools import product
+
+from models.genome import Genome
+from models.individual import Individual
+from models.step_evaluation import StepEvaluation
 
 # ==============================================================================
 # 1. PARÂMETROS DO ALGORITMO GENÉTICO E DO JOGO
@@ -10,14 +15,18 @@ from itertools import product
 
 # --- Parâmetros da População ---
 POPULATION_SIZE = 100  # Tamanho da população (100 indivíduos)
-GENOME_LENGTH = 4500   # Número máximo de ações por episódio (duração da "vida" do agente)
+GENOME_LENGTH = 15000   # Número máximo de ações por episódio (duração da "vida" do agente)
 
 # --- Pesos da Função de Fitness (Ajuste estes valores para guiar a evolução!) ---
 # O objetivo é maximizar essa pontuação
 W_KILLS = 150.0      # Peso para cada inimigo morto
 W_HEALTH = 1.0       # Peso para cada ponto de vida restante
 W_AMMO = 0.2         # Peso para cada ponto de munição restante
-ITEM_COUNT = 10
+ITEM_COUNT = 5.0
+DAMEGE_COUNT = 10.0
+DAMAGE_TAKEN = -0.5
+MISSING_SHOT = -0.8
+GAME_PROGRESS = 0.4
 
 # --- Parâmetros dos Operadores Genéticos ---
 TOURNAMENT_SIZE = 3     # Número de indivíduos que competem em cada torneio de seleção
@@ -45,6 +54,12 @@ def initialize_game():
     # Roda o jogo em modo "background", sem janela, para máxima velocidade de treino
     game.set_window_visible(True)
     game.set_mode(vzd.Mode.PLAYER)
+    game.set_available_game_variables([
+        vzd.POSITION_X,
+        vzd.POSITION_Y,
+        vzd.ANGLE,
+    ])
+
     game.set_available_buttons([
         vzd.Button.ATTACK,
         vzd.Button.MOVE_LEFT,
@@ -54,7 +69,7 @@ def initialize_game():
         vzd.Button.TURN_LEFT,
         vzd.Button.TURN_RIGHT,
         vzd.Button.MOVE_UP,
-        vzd.Button.MOVE_DOWN
+        #vzd.Button.MOVE_DOWN
     ])
     game.init()
     
@@ -80,54 +95,71 @@ def initialize_game():
     
     return game, actions
 
-def create_initial_population(num_actions):
+def create_initial_population(num_actions: int) -> List[Individual]:
     """Cria a população inicial com genomas aleatórios."""
     population = []
     for _ in range(POPULATION_SIZE):
         # Genoma é uma lista de índices de ações aleatórias
-        genome = [random.randint(0, num_actions - 1) for _ in range(GENOME_LENGTH)]
-        individual = {
-            "genome": genome,
-            "fitness": 0.0  # Fitness inicial
-        }
+        genome = [Genome(random.randint(0, num_actions - 1)) for _ in range(GENOME_LENGTH)]
+        individual = Individual(genome)
         population.append(individual)
     return population
 
-def calculate_fitness(game, individual, actions):
+def calculate_fitness(game, individual: Individual, actions: List[List[int]]) -> tuple[int, List[int]]:
     """
     Executa um episódio do Doom para um indivíduo e calcula seu fitness.
     Esta é a função mais importante e demorada do processo.
     """
+    step_results = []
     game.new_episode()
+    wrong_shot = 0
+    episode_progress = 0
     
+    for _ in range(7):
+        game.advance_action()
+
     # Executa cada ação (gene) do genoma do indivíduo
-    for action_index in individual["genome"]:
+    for genome in individual.genomes:
         if game.is_episode_finished():
             break
-        
-        # Ação é a combinação de botões correspondente ao índice
-        action_to_perform = actions[action_index]
-        game.make_action(action_to_perform)  # Corrigido: Removido os colchetes extras
 
-    # Coleta os resultados no final do episódio
-        kills = game.get_game_variable(vzd.GameVariable.KILLCOUNT)
-        health = game.get_game_variable(vzd.GameVariable.HEALTH)
-        ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
-        item_count = game.get_game_variable(vzd.GameVariable.ITEMCOUNT)
+        action_to_perform = actions[genome.action_index]
+        damege_count_before_action = game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+        step_evaluation = StepEvaluation(action_to_perform, 
+                                        game.get_game_variable(vzd.GameVariable.KILLCOUNT), 
+                                        game.get_game_variable(vzd.GameVariable.HEALTH),
+                                        game.get_game_variable(vzd.GameVariable.ITEMCOUNT),
+                                        damege_count_before_action
+                                        )
+        game.make_action(action_to_perform)
 
-    # Aplica a fórmula de fitness com os pesos definidos
-    fitness_score = (W_KILLS * kills) + \
-                    (W_HEALTH * health) + \
-                    (W_AMMO * ammo) + \
-                    (ITEM_COUNT * item_count)
-    print("resultados")
-    print(f"Kills: #{kills}")
-    print(f"Health: #{health}")
-    print(f"Armor: #{ammo}")
-    print(f"Items: #{item_count}")
-    return fitness_score
+        if (game.get_state() and game.get_state().game_variables[1] > episode_progress):
+            episode_progress = game.get_state().game_variables[1]
 
-def tournament_selection(population):
+
+        step_evaluation.kills_after = game.get_game_variable(vzd.GameVariable.KILLCOUNT)
+        step_evaluation.health_after = game.get_game_variable(vzd.GameVariable.HEALTH)
+        step_evaluation.items_after = game.get_game_variable(vzd.GameVariable.ITEMCOUNT)
+        step_evaluation.damega_count_after = game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+        step_results.append(step_evaluation.step_results())
+
+        if (damege_count_before_action == game.get_game_variable(vzd.GameVariable.DAMAGECOUNT) and action_to_perform[0] == 1):
+            wrong_shot += 1
+
+    fitness_score = (W_KILLS * game.get_game_variable(vzd.GameVariable.KILLCOUNT)) + \
+                    (W_HEALTH * game.get_game_variable(vzd.GameVariable.HEALTH)) + \
+                    (W_AMMO * game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)) + \
+                    (ITEM_COUNT * game.get_game_variable(vzd.GameVariable.ITEMCOUNT)) +\
+                    (DAMEGE_COUNT * game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)) +\
+                    (DAMAGE_TAKEN * game.get_game_variable(vzd.GameVariable.DAMAGE_TAKEN)) +\
+                    (MISSING_SHOT * wrong_shot) +\
+                    (GAME_PROGRESS * episode_progress)
+    
+
+
+    return fitness_score, step_results + [0] * (GENOME_LENGTH - len(step_results))
+
+def tournament_selection(population: List[Individual]) -> Individual:
     """
     Seleciona um indivíduo vencedor de um torneio.
     """
@@ -135,51 +167,63 @@ def tournament_selection(population):
     tournament_competitors = random.sample(population, TOURNAMENT_SIZE)
     
     # O vencedor é aquele com o maior fitness
-    winner = max(tournament_competitors, key=lambda x: x['fitness'])
+    winner = max(tournament_competitors, key=lambda x: x.fitness)
     return winner
 
-def one_point_crossover(parent1_genome, parent2_genome):
+def one_point_crossover(parent1_genome: List[Genome], parent2_genome: List[Genome])-> tuple[List[Genome], List[Genome]]:
     """
     Realiza o crossover de um ponto entre os genomas de dois pais.
     """
     assert len(parent1_genome) == len(parent2_genome)
-    genome_len = len(parent1_genome)
     
-    # Escolhe um ponto de corte aleatório, exceto nas extremidades
-    crossover_point = random.randint(1, genome_len - 1)
-    
-    # Cria os genomas dos filhos combinando as partes dos pais
-    child1_genome = parent1_genome[:crossover_point] + parent2_genome[crossover_point:]
-    child2_genome = parent2_genome[:crossover_point] + parent1_genome[crossover_point:]
-    
-    return child1_genome, child2_genome
+    negative_gene_1 = [(i, g) for i, g in enumerate(parent1_genome) if g.action_side_effect < 0]
+    negative_gene_2 = [(i, g) for i, g in enumerate(parent1_genome) if g.action_side_effect < 0]
 
-def mutate(genome, num_actions):
+    for (i_1, gene_1), (i_2, gene_2) in zip(negative_gene_1, negative_gene_2):
+        parent1_genome[i_1] = Genome(gene_2.action_index)
+        parent2_genome[i_2] = Genome(gene_1.action_index)
+
+    
+    return parent1_genome, parent2_genome
+
+def mutate(genomes: List[Genome], num_actions: int) -> List[Genome]:
     """
     Aplica mutação a um genoma com base na MUTATION_RATE.
     """
     mutated_genome = []
-    for gene in genome:
-        if random.random() < MUTATION_RATE:
-            # Se a mutação ocorrer, substitui o gene por uma nova ação aleatória
-            mutated_genome.append(random.randint(0, num_actions - 1))
+    for gene in genomes:
+        if (gene.action_side_effect < 0):
+            new_action = random.randint(0, num_actions - 1)
+            while new_action == gene.action_index:
+                new_action = random.randint(0, num_actions - 1)
+            mutated_genome.append(Genome(new_action))
+        elif (gene.action_side_effect == 0):
+            if random.random() < MUTATION_RATE:
+                mutated_genome.append(Genome(random.randint(0, num_actions - 1)))
+            else:
+                mutated_genome.append(gene)
         else:
-            # Caso contrário, mantém o gene original
             mutated_genome.append(gene)
     return mutated_genome
 
-def generate_new_population(old_population, num_actions):
+def generate_new_population(old_population: List[Individual], num_actions: int, populate_stagnated: bool) -> List[Individual]:
     """
     Gera uma nova população completa usando elitismo, seleção, crossover e mutação.
     """
     # Primeiro, ordena a população antiga para encontrar o melhor indivíduo
-    sorted_old_population = sorted(old_population, key=lambda x: x['fitness'], reverse=True)
+    sorted_old_population = sorted(old_population, key=lambda x: x.fitness, reverse=True)
     
     new_population = []
     
     # 1. Elitismo: Adiciona os melhores indivíduos diretamente à nova população
     # Regra 1 e 5: Manter o melhor indivíduo sem alterações.
     new_population = sorted_old_population[:ELITISM_COUNT]
+
+    if populate_stagnated:
+        del sorted_old_population[-ELITISM_COUNT:]
+    else:
+        del sorted_old_population[:ELITISM_COUNT]
+        del sorted_old_population[-ELITISM_COUNT:]
         
     # 2. Geração dos Indivíduos Restantes (99, neste caso)
     # Regra 5: O restante da população é gerado pelo processo evolutivo.
@@ -188,20 +232,22 @@ def generate_new_population(old_population, num_actions):
         parent1 = tournament_selection(sorted_old_population)
         parent2 = tournament_selection(sorted_old_population)
         
-        # Crossover para criar os filhos
-        child1_genome, child2_genome = one_point_crossover(parent1['genome'], parent2['genome'])
+        # Crossover para criar os filhos ( trocando genes negativos entre eles)
+        child1_genome, child2_genome = one_point_crossover(parent1.genomes, parent2.genomes)
         
-        # Mutação dos filhos
-        mutated_child1_genome = mutate(child1_genome, num_actions)
-        mutated_child2_genome = mutate(child2_genome, num_actions)
+        # Mutação dos filhos ( caso ainda tenham genes negativos)
+        child1_genome = mutate(child1_genome, num_actions)
+        
+        child2_genome = mutate(child2_genome, num_actions)
         
         # Adiciona os novos filhos à população
         # O fitness é zerado, pois eles ainda não foram avaliados
-        new_population.append({'genome': mutated_child1_genome, 'fitness': 0.0})
+        new_population.append(Individual(child1_genome))
         if len(new_population) < POPULATION_SIZE:
-            new_population.append({'genome': mutated_child2_genome, 'fitness': 0.0})
+            new_population.append(Individual(child2_genome))
             
     return new_population
+
 
 # ==============================================================================
 # 3. SCRIPT PRINCIPAL DE AVALIAÇÃO
@@ -230,18 +276,19 @@ if __name__ == "__main__":
         start_time_eval = time.time()
         # Nota: Só avaliamos os indivíduos que ainda não têm fitness (os gerados, não o elite)
         for i, individual in enumerate(current_population):
-            if individual['fitness'] == 0.0: # Fitness 0.0 indica um novo indivíduo a ser avaliado
-                 # Descomente a linha abaixo para ver o progresso da avaliação
-                 # print(f"Avaliando indivíduo {i + 1}/{POPULATION_SIZE}...", end='\r')
-                 fitness = calculate_fitness(game_instance, individual, possible_actions)
-                 individual["fitness"] = fitness
+            if individual.wainting_evaluated:
+                # Descomente a linha abaixo para ver o progresso da avaliação
+                # print(f"Avaliando indivíduo {i + 1}/{POPULATION_SIZE}...", end='\r')
+                fitness, steps_evaluations = calculate_fitness(game_instance, individual, possible_actions)
+                individual.fitness = fitness
+                individual.evaluate_steps(steps_evaluations)
         
         eval_time = time.time() - start_time_eval
         print(f"Avaliação concluída em {eval_time:.2f}s.")
 
         # 2. SELEÇÃO DE DADOS E VERIFICAÇÃO DE PARADA
-        sorted_population = sorted(current_population, key=lambda x: x['fitness'], reverse=True)
-        current_best_fitness = sorted_population[0]['fitness']
+        sorted_population = sorted(current_population, key=lambda x: x.fitness, reverse=True)
+        current_best_fitness = sorted_population[0].fitness
         fitness_history.append(current_best_fitness)
         
         print(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
@@ -252,7 +299,7 @@ if __name__ == "__main__":
             generations_without_improvement = 0
             print(f"✨ Nova melhoria significativa encontrada! Melhor fitness geral: {best_fitness_overall:.2f}")
             # Salvar o melhor indivíduo pode ser uma boa ideia aqui
-            # np.save('best_genome.npy', sorted_population[0]['genome'])
+            # np.save('best_genome.npy', sorted_population[0].genome.)
         else:
             generations_without_improvement += 1
             print(f"Sem melhoria significativa. Gerações estagnadas: {generations_without_improvement}/{STAGNATION_LIMIT}")
@@ -263,7 +310,7 @@ if __name__ == "__main__":
         
         # 3. GERAÇÃO DA PRÓXIMA POPULAÇÃO
         print("Gerando a próxima população...")
-        current_population = generate_new_population(sorted_population, num_possible_actions)
+        current_population = generate_new_population(sorted_population, num_possible_actions, generations_without_improvement > 10)
 
     # --- FIM DA EVOLUÇÃO ---
     print("\n" + "="*50)
