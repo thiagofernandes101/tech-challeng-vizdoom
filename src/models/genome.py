@@ -1,11 +1,14 @@
+from typing import List
+
+
 class Genome:
-    def __init__(self, action_index: int):
-        self._action_index = action_index
+    def __init__(self, action: List[int]):
+        self._action = action
         self._action_side_effect = 0
 
     @property
-    def action_index(self) -> int:
-        return self._action_index
+    def action(self) -> List[int]:
+        return self._action
     
     @property
     def action_side_effect(self) -> int:
@@ -16,4 +19,4 @@ class Genome:
         self._action_side_effect = action_side_effect
 
     def __str__(self) -> str:
-        return f"action_index: {self._action_index} action_side_effect: {self._action_side_effect}"
+        return f"action: {self._action} action_side_effect: {self._action_side_effect}"

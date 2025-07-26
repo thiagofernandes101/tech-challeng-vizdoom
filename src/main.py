@@ -8,6 +8,7 @@ from itertools import product
 from models.genome import Genome
 from models.individual import Individual
 from models.step_evaluation import StepEvaluation
+from models.game_interface import GameInterface
 
 # ==============================================================================
 # 1. PARÂMETROS DO ALGORITMO GENÉTICO E DO JOGO
@@ -45,44 +46,12 @@ SCENARIO_PATH = "deadly_corridor.cfg"  # Nome do arquivo de configuração do ce
 # 2. FUNÇÕES AUXILIARES
 # ==============================================================================
 
-def initialize_game():
+def initialize_game() -> tuple[GameInterface, List[List[int]]]:
     """Cria e configura a instância do jogo ViZDoom."""
     print("Inicializando ViZDoom...")
-    game = vzd.DoomGame()
-    game.load_config(SCENARIO_PATH)
+    game_interface = GameInterface(SCENARIO_PATH, True)
     
-    # Roda o jogo em modo "background", sem janela, para máxima velocidade de treino
-    game.set_window_visible(True)
-    game.set_mode(vzd.Mode.PLAYER)
-    game.set_available_game_variables([
-        vzd.POSITION_X,
-        vzd.POSITION_Y,
-        vzd.ANGLE,
-    ])
-
-    game.set_available_buttons([
-        vzd.Button.ATTACK,
-        vzd.Button.MOVE_LEFT,
-        vzd.Button.MOVE_RIGHT,
-        vzd.Button.MOVE_FORWARD,
-        vzd.Button.MOVE_BACKWARD,
-        vzd.Button.TURN_LEFT,
-        vzd.Button.TURN_RIGHT,
-        vzd.Button.MOVE_UP,
-        #vzd.Button.MOVE_DOWN
-    ])
-    game.init()
-    
-    # Define as ações possíveis que o agente pode tomar
-    # Cada ação é uma combinação de botões
-    # Ex: [0, 0, 1] -> Atirar
-    # actions = [random.randint(0, game.get_available_buttons_size() -1) for _ in range(GENOME_LENGTH)]
-    # return game, actions
-    
-    # Crie o "cardápio" de ações possíveis.
-    # Cada ação é uma lista de 0s e 1s com o mesmo tamanho do número de botões.
-    
-    num_buttons = game.get_available_buttons_size()
+    num_buttons = game_interface.get_avaliable_buttons_amount()
     
     # Gera todas as combinações possíveis de botões (0 ou 1 para cada)
     # product([0, 1], repeat=num_buttons) -> (0,0,0,0), (0,0,0,1), (0,0,1,0), ...
@@ -93,7 +62,7 @@ def initialize_game():
     
     print(f"Cardápio de ações definido com {len(actions)} movimentos possíveis.")
     
-    return game, actions
+    return game_interface, actions
 
 def create_initial_population(num_actions: int) -> List[Individual]:
     """Cria a população inicial com genomas aleatórios."""
@@ -105,53 +74,51 @@ def create_initial_population(num_actions: int) -> List[Individual]:
         population.append(individual)
     return population
 
-def calculate_fitness(game, individual: Individual, actions: List[List[int]]) -> tuple[int, List[int]]:
+def calculate_fitness(game_interface: GameInterface, individual: Individual, actions: List[List[int]]) -> tuple[int, List[int]]:
     """
     Executa um episódio do Doom para um indivíduo e calcula seu fitness.
     Esta é a função mais importante e demorada do processo.
     """
     step_results = []
-    game.new_episode()
     wrong_shot = 0
     episode_progress = 0
-    
-    for _ in range(7):
-        game.advance_action()
+    game_interface.start_episode()
 
     # Executa cada ação (gene) do genoma do indivíduo
     for genome in individual.genomes:
-        if game.is_episode_finished():
+        if game_interface.episode_is_finished():
             break
 
         action_to_perform = actions[genome.action_index]
-        damege_count_before_action = game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+        damege_count_before_action = game_interface.get_damage_count()
         step_evaluation = StepEvaluation(action_to_perform, 
-                                        game.get_game_variable(vzd.GameVariable.KILLCOUNT), 
-                                        game.get_game_variable(vzd.GameVariable.HEALTH),
-                                        game.get_game_variable(vzd.GameVariable.ITEMCOUNT),
+                                        game_interface.get_kill_count(), 
+                                        game_interface.get_current_healt(),
+                                        game_interface.get_items_count(),
                                         damege_count_before_action
                                         )
-        game.make_action(action_to_perform)
+        game_interface.make_action(action_to_perform)
 
-        if (game.get_state() and game.get_state().game_variables[1] > episode_progress):
-            episode_progress = game.get_state().game_variables[1]
+        try:
+            episode_progress = game_interface.get_current_y()
+        except RuntimeError:
+            pass
 
-
-        step_evaluation.kills_after = game.get_game_variable(vzd.GameVariable.KILLCOUNT)
-        step_evaluation.health_after = game.get_game_variable(vzd.GameVariable.HEALTH)
-        step_evaluation.items_after = game.get_game_variable(vzd.GameVariable.ITEMCOUNT)
-        step_evaluation.damega_count_after = game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+        step_evaluation.kills_after = game_interface.get_kill_count()
+        step_evaluation.health_after = game_interface.get_current_healt()
+        step_evaluation.items_after = game_interface.get_items_count()
+        step_evaluation.damega_count_after = game_interface.get_damage_count()
         step_results.append(step_evaluation.step_results())
 
-        if (damege_count_before_action == game.get_game_variable(vzd.GameVariable.DAMAGECOUNT) and action_to_perform[0] == 1):
+        if (damege_count_before_action == game_interface.get_damage_count() and action_to_perform[0] == 1):
             wrong_shot += 1
 
-    fitness_score = (W_KILLS * game.get_game_variable(vzd.GameVariable.KILLCOUNT)) + \
-                    (W_HEALTH * game.get_game_variable(vzd.GameVariable.HEALTH)) + \
-                    (W_AMMO * game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)) + \
-                    (ITEM_COUNT * game.get_game_variable(vzd.GameVariable.ITEMCOUNT)) +\
-                    (DAMEGE_COUNT * game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)) +\
-                    (DAMAGE_TAKEN * game.get_game_variable(vzd.GameVariable.DAMAGE_TAKEN)) +\
+    fitness_score = (W_KILLS * game_interface.get_kill_count()) + \
+                    (W_HEALTH * game_interface.get_current_healt()) + \
+                    (W_AMMO * game_interface.get_selected_weapon_ammo()) + \
+                    (ITEM_COUNT * game_interface.get_items_count()) +\
+                    (DAMEGE_COUNT * game_interface.get_damage_count()) +\
+                    (DAMAGE_TAKEN * game_interface.get_damage_taken()) +\
                     (MISSING_SHOT * wrong_shot) +\
                     (GAME_PROGRESS * episode_progress)
     
@@ -256,7 +223,7 @@ def generate_new_population(old_population: List[Individual], num_actions: int, 
 if __name__ == "__main__":
     
     # --- INICIALIZAÇÃO GERAL ---
-    game_instance, possible_actions = initialize_game()
+    game_interface, possible_actions = initialize_game()
     num_possible_actions = len(possible_actions)
     
     print(f"\nCriando população inicial com {POPULATION_SIZE} indivíduos...")
@@ -279,7 +246,7 @@ if __name__ == "__main__":
             if individual.wainting_evaluated:
                 # Descomente a linha abaixo para ver o progresso da avaliação
                 # print(f"Avaliando indivíduo {i + 1}/{POPULATION_SIZE}...", end='\r')
-                fitness, steps_evaluations = calculate_fitness(game_instance, individual, possible_actions)
+                fitness, steps_evaluations = calculate_fitness(game_interface, individual, possible_actions)
                 individual.fitness = fitness
                 individual.evaluate_steps(steps_evaluations)
         
@@ -320,5 +287,5 @@ if __name__ == "__main__":
     print(f"Melhor fitness final alcançado: {final_best_individual['fitness']:.2f}")
     print(f"Executado por {len(fitness_history)} gerações.")
 
-    game_instance.close()
+    game_interface.close()
     print("Instância do jogo finalizada. Processo concluído.")
