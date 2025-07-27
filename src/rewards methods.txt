@@ -1,0 +1,134 @@
+Reward methods
+get_living_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player after every tic.
+
+set_living_reward(self: vizdoom.DoomGame, living_reward: float) → None
+    Sets the reward granted to the player after every tic. A negative value is also allowed.
+    Default value: 0
+    Config key: livingReward/living_reward
+
+get_death_penalty(self: vizdoom.DoomGame) → float
+    Returns the penalty for the player’s death.
+
+set_death_penalty(self: vizdoom.DoomGame, death_penalty: float) → None
+    Sets a penalty for the player’s death. Note that in case of a negative value, the player will be rewarded upon dying.
+    Default value: 0
+    Config key: deathPenalty/death_penalty
+
+get_death_reward(self: vizdoom.DoomGame) → float
+    Returns the reward for the player’s death. It is equal to negation of value returned by get_death_reward().
+
+set_death_reward(self: vizdoom.DoomGame, death_reward: float) → None
+    Sets a reward for the player’s death. A negative value is also allowed.
+    Default value: 0
+    Config key: deathReward/death_reward
+
+get_map_exit_reward(self: vizdoom.DoomGame) → float
+    Returns the reward for finishing a map.
+
+set_map_exit_reward(self: vizdoom.DoomGame, map_exit_reward: float) → None
+    Sets a reward for finishing a map (finding an exit or succeeding in other programmed objective). A negative value is also allowed.
+    Default value: 0
+    Config key: mapExitReward/map_exit_reward
+
+get_kill_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player for killing an enemy.
+
+set_kill_reward(self: vizdoom.DoomGame, kill_reward: float) → None
+    Sets the reward granted to the player for killing an enemy. A negative value is also allowed.
+    Default value: 0
+    Config key: killReward/kill_reward
+
+get_item_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player for picking up an item.
+
+set_item_reward(self: vizdoom.DoomGame, item_reward: float) → None
+    Sets the reward granted to the player for picking up an item. A negative value is also allowed.
+    Default value: 0
+    Config key: itemReward/item_reward
+
+get_secret_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player for discovering a secret.
+
+set_secret_reward(self: vizdoom.DoomGame, secret_reward: float) → None
+    Sets the reward granted to the player for discovering a secret. A negative value is also allowed.
+    Default value: 0
+    Config key: secretReward/secret_reward
+
+get_frag_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player for scoring a frag (killing another player in multiplayer).
+
+set_frag_reward(self: vizdoom.DoomGame, frag_reward: float) → None
+    Sets the reward granted to the player for scoring a frag. A negative value is also allowed.
+    Default value: 0
+    Config key: fragReward/frag_reward
+
+get_hit_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player for hitting (damaging) an enemy.
+
+set_hit_reward(self: vizdoom.DoomGame, hit_reward: float) → None
+    Sets the reward granted to the player for hitting (damaging) an enemy. The reward is the same despite the amount of damage dealt. A negative value is also allowed.
+    Default value: 0
+    Config key: hitReward/hit_reward
+
+get_hit_taken_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player when hit (damaged) by an enemy. The reward is the same despite the amount of damage taken.
+
+set_hit_taken_reward(self: vizdoom.DoomGame, hit_taken_reward: float) → None
+    Sets the reward granted to the player when hit (damaged) by an enemy. The reward is the same despite the amount of damage taken. A negative value is also allowed.
+    Default value: 0
+    Config key: hitTakenReward/hit_taken_reward
+
+get_hit_taken_penalty(self: vizdoom.DoomGame) → float
+    Returns the penalty for the player when hit (damaged) by an enemy. The penalty is the same despite the amount of damage taken. It is equal to negation of value returned by get_hit_taken_reward().
+
+set_hit_taken_penalty(self: vizdoom.DoomGame, hit_taken_penalty: float) → None
+    Sets a penalty for the player when hit (damaged) by an enemy. The penalty is the same despite the amount of damage taken. Note that in case of a negative value, the player will be rewarded upon being hit.
+    Default value: 0
+    Config key: hitTakenPenalty/hit_taken_penalty
+
+get_damage_made_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player for damaging an enemy, proportional to the damage dealt. Every point of damage dealt to an enemy will result in a reward equal to the value returned by this method.
+
+set_damage_made_reward(self: vizdoom.DoomGame, damage_made_reward: float) → None
+    Sets the reward granted to the player for damaging an enemy, proportional to the damage dealt. Every point of damage dealt to an enemy will result in a reward equal to the value returned by this method. A negative value is also allowed.
+    Default value: 0
+    Config key: damageMadeReward/damage_made_reward
+
+get_damage_taken_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player when damaged by an enemy, proportional to the damage received. Every point of damage taken will result in a reward equal to the value returned by this method.
+
+set_damage_taken_reward(self: vizdoom.DoomGame, damage_taken_reward: float) → None
+    Sets the reward granted to the player when damaged by an enemy, proportional to the damage received. Every point of damage taken will result in a reward equal to the set value. A negative value is also allowed.
+    Default value: 0
+    Config key: damageTakenReward/damage_taken_reward
+
+get_damage_taken_penalty(self: vizdoom.DoomGame) → float
+    Returns the penalty for the player when damaged by an enemy, proportional to the damage received. Every point of damage taken will result in a penalty equal to the value returned by this method. It is equal to negation of value returned by get_damage_taken_reward().
+
+set_damage_taken_penalty(self: vizdoom.DoomGame, damage_taken_penalty: float) → None
+    Sets a penalty for the player when damaged by an enemy, proportional to the damage received. Every point of damage taken will result in a penalty equal to the set value. Note that in case of a negative value, the player will be rewarded upon receiving damage.
+    Default value: 0
+    Config key: damageTakenPenalty/damage_taken_penalty
+
+get_health_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player for getting health points.
+
+set_health_reward(self: vizdoom.DoomGame, health_reward: float) → None
+    Sets the reward granted to the player for getting health points. A negative value is also allowed.
+    Default value: 0
+    Config key: healthReward/health_reward
+
+get_armor_reward(self: vizdoom.DoomGame) → float
+    Returns the reward granted to the player for getting armor points.
+
+set_armor_reward(self: vizdoom.DoomGame, armor_reward: float) → None
+    Sets the reward granted to the player for getting armor points. A negative value is also allowed.
+    Default value: 0
+    Config key: armorReward/armor_reward
+
+get_last_reward(self: vizdoom.DoomGame) → float
+    Returns a reward granted after the last update of state.
+
+get_total_reward(self: vizdoom.DoomGame) → float
+    Returns the sum of all rewards gathered in the current episode.
