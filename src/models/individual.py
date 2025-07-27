@@ -4,7 +4,7 @@ import random
 from typing import List
 
 from models.genome import Genome
-from models.game_element import Enemy, Colectable, GameElement
+from models.game_element import Enemy, Colectable, GameElement, Blood, Targer
 from models.movement import Movement
 from models.observer import Observer
 from utils.calc import Calc
@@ -15,6 +15,7 @@ class Individual(Observer):
         self.__genomes: list[Genome] = []
         self.__fitness = 0.0
         self.__wainting_evaluated = True
+        self.__main_target = None
         self.__targets: list[GameElement] = []
         self.__fitness = 0
         self.__options = {Movement(move_backward=True): False,
@@ -58,33 +59,38 @@ class Individual(Observer):
     def evaluate_genome(self, index: int, action_side_effect: int):
         self.__genomes[index].action_side_effect = action_side_effect
 
-    def add_genome(self, pos_x: float, pos_y: float, angle: float, elements: list[GameElement], player: GameElement) -> None:
-        self.__generate_genome(pos_x, pos_y, angle, elements, player)
+    def add_genome(self, pos_x: float, pos_y: float, elements: list[GameElement], player: GameElement) -> None:
+        genome = self.__generate_genome(pos_x, pos_y, elements, player)
+        self.__genomes.append(genome)
 
-    def __generate_genome(self, pos_x: float, pos_y: float, angle: float, elements: list[GameElement], player: GameElement) -> None:
-        DANGER_RADIUS = 180.0
+    def __generate_genome(self, pos_x: float, pos_y: float, elements: list[GameElement], player: GameElement) -> Genome:
+        DANGER_RADIUS = 200.0
         elements = list(filter(lambda e: e.id not in self.__objects_ids_insteracted, elements))
-        if not self.__targets:
-            self.__targets = elements
-        else:
-            new_elements = [e for e in elements if e not in self.__targets]
-            if new_elements:
-                self.__targets += new_elements
-                self.__targets = sorted(self.__targets, key=lambda e: Calc.get_distance_between_elements(player, e))
+        if self.__main_target is None:
+            self.__main_target = list(filter(lambda e: isinstance(e, Targer), elements))
+
+        self.__targets = elements
+        self.__targets.append(self.__main_target)
 
         nearby_enemies = [e for e in self.__targets if isinstance(e, Enemy) and Calc.get_distance_between_elements(player, e) <= DANGER_RADIUS]
+
+        take_hit = any(isinstance(element, Blood) for element in elements)
 
 
         if nearby_enemies:
             enemy = sorted(nearby_enemies, key=lambda e: Calc.get_distance_between_elements(player, e))[0]
-            action = self.__figth_against_enemy(pos_x, pos_y, angle, enemy)
-            self.__genomes.append(Genome(action))
+            action = self.__figth_against_enemy(pos_x, pos_y, player.angle, enemy, take_hit)
+            return Genome(action)
         else:
-            if isinstance(self.__targets[0], Colectable):
-                self.__go_to_target(player, angle, self.__targets[0])
+            element = list(filter(lambda e: isinstance(e, Colectable) or isinstance(e, Targer), elements))
+            return Genome(self.__go_to_target(player, element[0]))
 
-    def __figth_against_enemy(self, pos_x: float, pos_y: float, angle: float, enemy: GameElement) -> List[int]:
-        movement = self.__random_movement_with_visibility()
+
+    def __figth_against_enemy(self, pos_x: float, pos_y: float, angle: float, enemy: GameElement, take_hit: bool) -> List[int]:
+        if take_hit:
+            movement = self.__random_movement_with_visibility()
+        else:
+            movement = Movement()
         sim_pos_x, sim_pos_y, sim_angle = Calc.simulate_movement_effect(pos_x, pos_y, angle, movement)
         rotate_needed = self.__rotate_towards(sim_pos_x, sim_pos_y, sim_angle, enemy)
         if rotate_needed > 5:
@@ -93,7 +99,7 @@ class Individual(Observer):
             movement.turn_left = True
         if self.__can_shoot(sim_pos_x, sim_pos_y, sim_angle, enemy):
             movement.attack = True
-        return movement.to_list_command
+        return movement.to_list_command()
 
     def __rotate_towards(self, pos_x: float, pos_y: float, current_angle: float, enemy: GameElement) -> float:
         target_angle = Calc.angle_to_target(pos_x, pos_y, enemy.pos_x, enemy.pos_y)
@@ -116,11 +122,11 @@ class Individual(Observer):
         self.__options[unused_movements[0]] = True
         return copy.deepcopy(unused_movements[0])
 
-    def __go_to_target(self, player: GameElement, target_angle: float, collectable: GameElement) -> List[int]:
+    def __go_to_target(self, player: GameElement, collectable: GameElement) -> list[int]:
         movement = Movement()
-        angle_diff = Calc.angle_difference(player.angle, target_angle)
+        angle_diff = Calc.angle_difference(player.angle, collectable.angle)
 
-        if abs(angle_diff) > 5:
+        if abs(angle_diff) > 1:
             if angle_diff > 0:
                 movement.turn_right = True
             else:
@@ -128,5 +134,4 @@ class Individual(Observer):
         else:
             movement.move_forward = True
 
-        self.__genomes.append(Genome(movement.to_list_command))
-        return movement.to_list_command
+        return movement.to_list_command()

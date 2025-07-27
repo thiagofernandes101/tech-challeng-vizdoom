@@ -48,17 +48,16 @@ def calculate_fitness(game_interface: GameInterface) -> list[Individual]:
         while(not game_interface.episode_is_finished()):
             pos_x = game_interface.get_current_x()
             pos_y = game_interface.get_current_y()
-            angle = game_interface.get_current_angle()
-            individual.add_genome(pos_x, pos_y, angle, current_visuble_elements, player)
+            individual.add_genome(pos_x, pos_y, current_visuble_elements, player)
             genome = individual.genome(current_genome)
             damege_count_before_action = game_interface.get_damage_count()
-            step_evaluation = StepEvaluation(genome.action(), 
+            step_evaluation = StepEvaluation(genome.action, 
                                     game_interface.get_kill_count(), 
                                     game_interface.get_current_healt(),
                                     game_interface.get_items_count(),
                                     damege_count_before_action
                                     )
-            game_interface.make_action(genome.action())
+            game_interface.make_action(genome.action)
             step_evaluation.kills_after = game_interface.get_kill_count()
             step_evaluation.health_after = game_interface.get_current_healt()
             step_evaluation.items_after = game_interface.get_items_count()

@@ -49,6 +49,12 @@ class Player(GameElement):
 class Colectable(GameElement):
     pass
 
+class Blood(GameElement):
+    pass
+
+class Targer(GameElement):
+    pass
+
 class ElementFactory:
     @staticmethod
     def create(label)-> Optional[GameElement]:
@@ -56,7 +62,11 @@ class ElementFactory:
             return Enemy(label)
         elif label.object_name == 'DoomPlayer':
             return Player(label)
-        elif label.object_name in ('GreenArmor','ArmorBonus','BlueArmor','TeleportFog', 'RocketLauncher','Chainsaw','PlasmaRifle','Chaingun','SuperShotgun','Shotgun','Stimpack','Medikit','HealthBonus', 'ClipBox','RocketBox', 'CellPack', 'Clip', 'ShellBox'):
+        elif label.object_name in ('ArmorBonus','BlueArmor','TeleportFog', 'RocketLauncher','Chainsaw','PlasmaRifle','Chaingun','SuperShotgun','Shotgun','Stimpack','Medikit','HealthBonus', 'ClipBox','RocketBox', 'CellPack', 'Clip', 'ShellBox'):
             return Colectable(label)
-        else: #ignore 'Blood'
+        elif label.object_name == 'Blood':
+            return Blood(label)
+        elif label.object_name == 'GreenArmor':
+            return Targer(label)
+        else:
             return None
