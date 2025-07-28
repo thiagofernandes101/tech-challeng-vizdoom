@@ -1,12 +1,18 @@
+from itertools import product
+import random
 import time
-from models.game_element import GameElement
+from typing import List
 from models.game_interface import GameInterface
 from models.individual import Individual
-from models.step_evaluation import StepEvaluation
+from models.movement import Movement
+from models.genome import Genome
+from utils.genetic import Genetic
+
+MOVEMENT_LIMIT = 4500 
+
 
 SCENARIO_PATH = "deadly_corridor.cfg"
 POPULATION_SIZE = 100 
-
 
 W_KILLS = 150.0
 W_HEALTH = 1.0
@@ -22,79 +28,71 @@ MAX_GENERATIONS = 999999    # O número máximo de gerações que o algoritmo ir
 STAGNATION_LIMIT = 10000    # N: O número de gerações sem melhoria antes de parar
 IMPROVEMENT_THRESHOLD = 0.1 # A melhoria mínima no fitness para ser considerada "significativa"
 
+CONVERGENCE = 10
+
+ELITISM_COUNT = 3
+TOURNAMENT_SIZE = 3 
+MUTATION_RATE = 0.5 
+
 def initialize_game() -> GameInterface:
     """Cria e configura a instância do jogo ViZDoom."""
     print("Inicializando ViZDoom...")
     return GameInterface(SCENARIO_PATH, True)
 
-def calculate_fitness(game_interface: GameInterface) -> list[Individual]:
+def all_valid_moviments() -> list[Movement]:
+    movimentos_validos = []
+    
+    for comando in product([0, 1], repeat=9):
+        move = Movement.from_list(list(comando))
+
+        if move.no_action():
+            continue
+        if move.move_left and move.move_right:
+            continue
+        if move.move_forward and move.move_backward:
+            continue
+        if move.turn_left and move.turn_right:
+            continue
+
+        movimentos_validos.append(move)
+    
+    print(f"Cardápio de ações definido com {len(movimentos_validos)} movimentos possíveis.")
+    return movimentos_validos
+
+def create_initial_population(limit_per_individual: int, possible_movements: List[Movement]) -> List[Individual]:
     population: list[Individual] = []
     for _ in range(POPULATION_SIZE):
-        game_interface.start_episode()
-
-        current_visuble_elements: list[GameElement] = []
-        while(not current_visuble_elements):
-            try:
-                current_visuble_elements, player = game_interface.get_visible_elements()
-            except RuntimeError:
-                pass
-
-        wrong_shot = 0
-        episode_progress = 0
-        current_genome = 0
-
-        individual = Individual()
-        game_interface.subscribe(individual)
-        while(not game_interface.episode_is_finished()):
-            pos_x = game_interface.get_current_x()
-            pos_y = game_interface.get_current_y()
-            individual.add_genome(pos_x, pos_y, current_visuble_elements, player)
-            genome = individual.genome(current_genome)
-            damege_count_before_action = game_interface.get_damage_count()
-            step_evaluation = StepEvaluation(genome.action, 
-                                    game_interface.get_kill_count(), 
-                                    game_interface.get_current_healt(),
-                                    game_interface.get_items_count(),
-                                    damege_count_before_action
-                                    )
-            game_interface.make_action(genome.action)
-            step_evaluation.kills_after = game_interface.get_kill_count()
-            step_evaluation.health_after = game_interface.get_current_healt()
-            step_evaluation.items_after = game_interface.get_items_count()
-            step_evaluation.damega_count_after = game_interface.get_damage_count()
-            individual.evaluate_genome(current_genome, step_evaluation.step_results())
-            current_genome += 1
-            try:
-                current_visuble_elements, player = game_interface.get_visible_elements()
-            except RuntimeError:
-                pass
-        game_interface.unsubscribe()
-        population.append(individual)
-
-    fitness_score = (W_KILLS * game_interface.get_kill_count()) + \
-                (W_HEALTH * game_interface.get_current_healt()) + \
-                (W_AMMO * game_interface.get_selected_weapon_ammo()) + \
-                (ITEM_COUNT * game_interface.get_items_count()) +\
-                (DAMEGE_COUNT * game_interface.get_damage_count()) +\
-                (DAMAGE_TAKEN * game_interface.get_damage_taken()) +\
-                (MISSING_SHOT * wrong_shot) +\
-                (GAME_PROGRESS * episode_progress)
-    individual.fitness = fitness_score
-    
+        movements = random.choices(possible_movements, k=limit_per_individual)
+        population.append(Individual([Genome(movement) for movement in movements]))
     return population
-    
+
+def calculate_fitness(game_interface: GameInterface, individuals: List[Individual]) -> List[Individual]:
+    for individual in individuals:
+        if individual.evaluated:
+            continue
+        game_interface.start_episode()
+        for genome in individual.genomes:
+            if game_interface.episode_is_finished():
+                individual.fitness = game_interface.get_fitness()
+                break
+            step_evaluation = game_interface.make_action(genome.movement)
+            genome.movement_side_effect = step_evaluation.step_results()
+    return individuals
 
 if __name__ == "__main__":
 
     best_fitness_overall = -float('inf')
     generations_without_improvement = 0
+    moviments = all_valid_moviments()
     game_interface = initialize_game()
     fitness_history: list[int] = []
+    individuals = create_initial_population(MOVEMENT_LIMIT, moviments)
     for generation in range(MAX_GENERATIONS):
         print(f"\n{'='*20} GERAÇÃO {generation} {'='*20}")
-        start_time_eval = time.time()
 
-        population = calculate_fitness(game_interface)
+        print(f"Avaliando {len(individuals)} indivíduos...")
+        start_time_eval = time.time()
+        population = calculate_fitness(game_interface, individuals)
 
         eval_time = time.time() - start_time_eval
         print(f"Avaliação concluída em {eval_time:.2f}s.")
@@ -120,7 +118,8 @@ if __name__ == "__main__":
             break
 
         print("Gerando a próxima população...")
-        current_population = generate_new_population(sorted_population, num_possible_actions, generations_without_improvement > 10)
+        genetic = Genetic(ELITISM_COUNT, POPULATION_SIZE, TOURNAMENT_SIZE, MUTATION_RATE)
+        current_population = genetic.generate_new_population(sorted_population, moviments, generations_without_improvement > CONVERGENCE)
 
     print("\n" + "="*50)
     print("Evolução finalizada.")

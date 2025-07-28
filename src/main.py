@@ -15,8 +15,8 @@ from models.game_interface import GameInterface
 # ==============================================================================
 
 # --- Parâmetros da População ---
+MOVEMENT_ = 4500 
 POPULATION_SIZE = 100  # Tamanho da população (100 indivíduos)
-GENOME_LENGTH = 15000   # Número máximo de ações por episódio (duração da "vida" do agente)
 
 # --- Pesos da Função de Fitness (Ajuste estes valores para guiar a evolução!) ---
 # O objetivo é maximizar essa pontuação

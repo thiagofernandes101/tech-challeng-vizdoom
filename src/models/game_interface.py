@@ -1,11 +1,10 @@
 import vizdoom as vzd
 
-from models.game_element import ElementFactory, GameElement, Player
-from models.event_emitter import EventEmitter
-from models.observer import Observer
+from models.movement import Movement
+from models.step_evaluation import StepEvaluation
 from utils.calc import Calc
 
-class GameInterface(EventEmitter):
+class GameInterface():
 
     def __init__(self, scenario_path: str = "deadly_corridor.cfg", show_screen: bool = False):
         self.__game = vzd.DoomGame()
@@ -19,96 +18,68 @@ class GameInterface(EventEmitter):
         ])
         self.__game.set_doom_skill(1)
         self.__game.init()
-        self.__enemy_die_amount = 0
-        self.__item_collected_amount = 0
+        self.__target_x = 1312.00
+        self.__target_y = 0.0
 
     def get_avaliable_buttons_amount(self) -> int:
         return self.__game.get_available_buttons_size()
 
     def start_episode(self)-> None:
+        self.__distance = Calc.distance(0.0, 0.0, self.__target_x, self.__target_y)
+        self.__episode_progress = 0.0
+        self.__wrong_shot = 0
         self.__game.new_episode()
         for _ in range(7):
             self.__game.advance_action()
 
     def episode_is_finished(self) -> bool:
-        finished = self.__game.is_episode_finished()
-        if finished:
-            self.__enemy_die_amount = 0
-            self.__item_collected_amount = 0
-        return finished
-
-    def get_kill_count(self)-> int:
-        current_kills = self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)
-        if current_kills != self.__enemy_die_amount:
-            self.notify()
-            self.__enemy_die_amount += 1
-        return current_kills
-
-    def get_damage_count(self)-> int:
-        return self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+        return self.__game.is_episode_finished()
     
-    def get_current_healt(self)-> int:
-        return self.__game.get_game_variable(vzd.GameVariable.HEALTH)
-    
-    def get_items_count(self)-> int:
-        current_items = self.__game.get_game_variable(vzd.GameVariable.ITEMCOUNT)
-        if current_items != self.__item_collected_amount:
-            self.notify()
-            self.__enemy_die_amount += 1
-        return current_items
-    
-    def get_damage_taken(self)-> int:
-        return self.__game.get_game_variable(vzd.GameVariable.DAMAGE_TAKEN)
-    
-    def get_selected_weapon_ammo(self)-> int:
-        return self.__game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
+    def get_fitness(self)-> float:
+        return (
+            (0.5 * self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)) +
+            (1.0 * self.__game.get_game_variable(vzd.GameVariable.HEALTH)) +
+            (0.5 * self.__game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)) +
+            (0.5 * self.__game.get_game_variable(vzd.GameVariable.ITEMCOUNT)) +
+            (1.0 * self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)) +
+            (1.0 * self.__game.get_game_variable(vzd.GameVariable.DAMAGE_TAKEN)) +
+            (1.0 * self.__wrong_shot) -
+            (2.0 * self.__distance - self.__current_distance)
+        )
 
-    def make_action(self, actions: list[int]) -> None:
-        if len(actions) > self.get_avaliable_buttons_amount():
-            raise ValueError(f'actions list must have {len(self.get_avaliable_buttons_amount())} but you sent {len(actions)}')
-        self.__game.make_action(actions)
+    def make_action(self, movement: Movement) -> StepEvaluation:
+        commands = movement.to_list_command()
+        if len(commands) > self.get_avaliable_buttons_amount():
+            raise ValueError(f'actions list must have {len(self.get_avaliable_buttons_amount())} but you sent {len(commands)}')
+        
+        before_kill_count = self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)
 
-    __EPISODE_FINISHED = 'O episódio foi finalizado'
+        step_evaluation = StepEvaluation(commands, 
+                                            before_kill_count, 
+                                            self.__game.get_game_variable(vzd.GameVariable.HEALTH),
+                                            self.__game.get_game_variable(vzd.GameVariable.ITEMCOUNT),
+                                            self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+                                        )
+        self.__game.make_action(commands)
+        step_evaluation.kills_after = self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)
+        step_evaluation.health_after = self.__game.get_game_variable(vzd.GameVariable.HEALTH)
+        step_evaluation.items_after = self.__game.get_game_variable(vzd.GameVariable.ITEMCOUNT)
+        step_evaluation.damega_count_after = self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+        if movement.attack and before_kill_count == self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT):
+            self.__wrong_shot +=1
 
-    def get_current_y(self)-> float:
-        if (not self.__game.get_state()):
-            raise RuntimeError(self.__EPISODE_FINISHED)
-        return self.__game.get_state().game_variables[1]
+        if self.__game.get_state():
+            self.__current_distance = Calc.distance(self.__game.get_state().game_variables[0], self.__game.get_state().game_variables[1], self.__target_x, self.__target_y)
+            if self.__current_distance < self.__distance:
+                step_evaluation.progress_statu(1)
+            elif self.__current_distance > self.__distance:
+                step_evaluation.progress_statu(-1)
+            else:
+                step_evaluation.progress_statu(0)   
+        else:
+            step_evaluation.progress_statu(0)   
 
-    def get_current_x(self)-> float:
-        if (not self.__game.get_state()):
-            raise RuntimeError(self.__EPISODE_FINISHED)
-        return self.__game.get_state().game_variables[0]
-    
-    def get_current_angle(self)-> float:
-        if (not self.__game.get_state()):
-            raise RuntimeError(self.__EPISODE_FINISHED)
-        return self.__game.get_state().game_variables[2]
-
-    def get_visible_elements(self) -> tuple[list[GameElement], GameElement]:
-        if (not self.__game.get_state()):
-            raise RuntimeError('Elementos indisponíveis')
-        labels = self.__game.get_state().labels
-        elements: list[GameElement] = []
-        player = None
-        for label in labels:
-            element = ElementFactory.create(label)
-            if element is not None:
-                if isinstance(element, Player):
-                    player = element
-                else:
-                    elements.append(element)
-        return sorted(elements, key=lambda e: Calc.get_distance_between_elements(player, e)), player
-
-    def subscribe(self, observer: Observer) -> None:
-        self.__observer = observer
-
-    def unsubscribe(self) -> None:
-        self.__observer = None
-
-    def notify(self) -> None:
-        if self.__observer is not None:
-            self.__observer.update()
+        return step_evaluation
 
     def close(self) -> None:
         self.__game.close()

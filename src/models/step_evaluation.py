@@ -45,10 +45,13 @@ class StepEvaluation:
     def damega_count_after(self, damega_count_after: int) -> None:
         self._damega_count_after = damega_count_after
 
+    def progress_statu(self, progress: int) -> None:
+        self.__progress = progress
+
     def step_results(self) -> int:
         kill_npc = self._kills_after - self._kills_before > 0
         lost_health = self._health_after - self._health_before > 0
         get_items = self._items_after - self._items_before > 0
         miss_shot = self._action_performed[0] == 1 and self._damega_count_after == self._damega_count_before
         damage_count = self._damega_count_before - self._damega_count_after > 0
-        return int(kill_npc) + int(get_items) - int(lost_health) - int(miss_shot) + int(damage_count)
+        return int(kill_npc) + int(get_items) - int(lost_health) - int(miss_shot) + int(damage_count) + self.__progress

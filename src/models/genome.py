@@ -1,22 +1,22 @@
-from typing import List
+from models.movement import Movement
 
 
 class Genome:
-    def __init__(self, action: List[int]):
-        self._action = action
-        self._action_side_effect = 0
+    def __init__(self, movement: Movement):
+        self._movement = movement
+        self._movement_side_effect = 0
 
     @property
-    def action(self) -> List[int]:
-        return self._action
+    def movement(self) -> Movement:
+        return self._movement
     
     @property
-    def action_side_effect(self) -> int:
-        return self._action_side_effect
+    def movement_side_effect(self) -> int:
+        return self._movement_side_effect
     
-    @action_side_effect.setter
-    def action_side_effect(self, action_side_effect: int) -> None:
-        self._action_side_effect = action_side_effect
+    @movement_side_effect.setter
+    def movement_side_effect(self, movement_side_effect: int) -> None:
+        self._movement_side_effect = movement_side_effect
 
     def __str__(self) -> str:
-        return f"action: {self._action} action_side_effect: {self._action_side_effect}"
+        return f"action: {self._movement} movement_side_effect: {self._movement_side_effect}"
