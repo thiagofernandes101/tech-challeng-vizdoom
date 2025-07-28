@@ -36,17 +36,18 @@ class GameInterface():
         return self.__game.is_episode_finished()
     
     def get_fitness(self)-> float:
-        print(f'distância do objettivo {self.__distance - self.__current_distance}')
-        print(f'kills: {self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)}')
+        print(f'maior espaço percorrido {self.__distance - self.__current_distance}')
+        if self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT) > 4:
+            print(f'kills: {self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)}')
         return (
             (0.5 * self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)) +
             (1.0 * self.__game.get_game_variable(vzd.GameVariable.HEALTH)) +
             (0.5 * self.__game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)) +
             (0.5 * self.__game.get_game_variable(vzd.GameVariable.ITEMCOUNT)) +
-            (1.0 * self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)) +
-            (1.0 * self.__game.get_game_variable(vzd.GameVariable.DAMAGE_TAKEN)) +
+            (0.5 * self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)) +
+            (0.5 * self.__game.get_game_variable(vzd.GameVariable.DAMAGE_TAKEN)) +
             (1.0 * self.__wrong_shot) -
-            (2.0 * self.__distance - self.__current_distance)
+            (2.0 * (self.__distance - self.__current_distance))
         )
 
     def make_action(self, movement: Movement) -> StepEvaluation:
