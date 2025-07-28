@@ -25,9 +25,9 @@ def setup_logger(name, log_file, level=logging.INFO):
 training_logger = setup_logger('training_logger', 'training_log.txt')
 
 # ==============================================================================
-# 1. PARÂMETROS GLOBAIS (FILOSOFIA "SOBREVIVENTE PRIORITÁRIO")
+# 1. PARÂMETROS GLOBAIS (FILOSOFIA "RECUO TÁTICO")
 # ==============================================================================
-POPULATION_SIZE = 150
+POPULATION_SIZE = 200
 SCENARIO_PATH = "deadly_corridor.cfg"
 FRAME_SKIP = 4
 NN_INPUT_SIZE = 9
@@ -39,22 +39,23 @@ ARMOR_POSITION = np.array([1312.0, 0.0])
 ZONE_BOUNDS = [ (0, 450), (451, 900), (901, 1400) ]
 MAX_AMMO = 52
 
-DEATH_PENALTY_BASE = -6000.0
+DEATH_PENALTY_BASE = -7000.0 
 DEATH_PENALTY_ZONE_REDUCTION = 1500.0
+W_SURVIVAL_BONUS = 3000.0
 LEVEL_COMPLETION_BONUS = 15000.0
 W_ARMOR_PICKUP_ALONE = 500.0
 W_LEVEL_INCOMPLETE_PENALTY = -3000.0
 W_ZONE_CLEAR_BONUSES = [ 2000.0, 3000.0, 4000.0 ]
 W_PROGRESS_TOWARDS_OBJECTIVE = 150.0
-W_COMBAT_SURVIVAL_BONUS = 2.0
+
+# ALTERADO: Recompensas de sobrevivência aumentadas para forçar comportamento defensivo
+W_COMBAT_SURVIVAL_BONUS = 3.0
+W_HEALTH_PRESERVATION_BONUS = 35.0
 
 W_DAMAGE_DEALT_BONUS = 30.0
 W_AMMO_EFFICIENCY_BONUS = 200.0
 W_AMMO_CONSERVED_BONUS = 15.0
-
-W_HEALTH_PRESERVATION_BONUS = 25.0
 W_COMBAT_DAMAGE_PENALTY = -25.0
-
 W_BEING_AIMED_AT_PENALTY = -30.0
 W_TIME_PENALTY = -1.0
 W_WASTED_SHOT_PENALTY = -20.0
@@ -62,14 +63,16 @@ W_STAGNATION_PENALTY = -100.0
 STAGNATION_TICKS_THRESHOLD = 40
 STAGNATION_DISTANCE_THRESHOLD = 15.0
 
-# --- Parâmetros Genéticos (Com Mutação Decrescente) ---
+# NOVO: Penalidade por exposição a múltiplos inimigos
+W_MULTIPLE_THREATS_PENALTY = -50.0
+
 ELITISM_COUNT = 2
 TOURNAMENT_SIZE = 3
-STAGNATION_LIMIT = 80
-
-MAX_MUTATION_RATE = 0.10  # Começa com alta exploração
-MIN_MUTATION_RATE = 0.01  # Termina com baixo refinamento
-MUTATION_DECAY_GENERATIONS = 150 # Número de gerações para a taxa cair do máximo ao mínimo
+STAGNATION_LIMIT = 100
+IMPROVEMENT_THRESHOLD = 0.05
+MAX_MUTATION_RATE = 0.10
+MIN_MUTATION_RATE = 0.01
+MUTATION_DECAY_GENERATIONS = 200
 
 # ==============================================================================
 # 2. FUNÇÕES AUXILIARES E DE AVALIAÇÃO
@@ -111,7 +114,7 @@ def get_current_zone(player_pos):
 
 def get_entities_and_zones(state, player_pos):
     enemies_by_zone = {i: [] for i in range(len(ZONE_BOUNDS))}
-    is_targeted = 0.0
+    enemies_aiming_count = 0 # ALTERADO: Agora contamos quantos inimigos estão mirando
     all_enemies = []
     if state and state.labels:
         for label in state.labels:
@@ -126,8 +129,8 @@ def get_entities_and_zones(state, player_pos):
                 angle_enemy_to_player = math.degrees(math.atan2(vec_enemy_to_player[1], vec_enemy_to_player[0]))
                 angle_diff = (label.object_angle - angle_enemy_to_player + 180) % 360 - 180
                 if abs(angle_diff) < 15.0:
-                    is_targeted = 1.0
-    return all_enemies, enemies_by_zone, is_targeted
+                    enemies_aiming_count += 1
+    return all_enemies, enemies_by_zone, enemies_aiming_count
 
 def evaluate_individual(genome, game, actions, b_map, nn_config):
     input_size, hidden_size, output_size = nn_config
@@ -145,7 +148,9 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
         state = game.get_state()
         if state is None: continue
         player_pos = np.array([game.get_game_variable(vzd.GameVariable.POSITION_X), game.get_game_variable(vzd.GameVariable.POSITION_Y)])
-        all_enemies, enemies_by_zone, is_being_aimed_at = get_entities_and_zones(state, player_pos)
+        all_enemies, enemies_by_zone, enemies_aiming_count = get_entities_and_zones(state, player_pos) # ALTERADO
+        is_being_aimed_at = 1.0 if enemies_aiming_count > 0 else 0.0
+        
         player_zone = get_current_zone(player_pos)
         is_combat_mode = len(all_enemies) > 0
         tactical_objective = ARMOR_POSITION
@@ -167,6 +172,7 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
                     next_zone_found = True
                     break
             if not next_zone_found: tactical_objective = ARMOR_POSITION
+        
         dist_to_objective, angle_to_objective = 0.0, 0.0
         if tactical_objective is not None:
             delta = tactical_objective - player_pos
@@ -174,6 +180,7 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
             target_angle = math.degrees(math.atan2(delta[1], delta[0]))
             angle_diff = (game.get_game_variable(vzd.GameVariable.ANGLE) - target_angle + 180) % 360 - 180
             angle_to_objective = angle_diff / 180.0
+        
         nn_input = [
             last_health / 100.0, last_ammo / 52.0, 1.0 if is_combat_mode else 0.0,
             dist_to_objective / 1000.0, angle_to_objective,
@@ -184,18 +191,24 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
         action_index = np.argmax(action_scores)
         total_reward += W_TIME_PENALTY
         damage_dealt_before_action = game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+        
         if last_dist_to_objective is not None:
             progress = last_dist_to_objective - dist_to_objective
             total_reward += W_PROGRESS_TOWARDS_OBJECTIVE * progress
         last_dist_to_objective = dist_to_objective
+        
         if is_being_aimed_at > 0: total_reward += W_BEING_AIMED_AT_PENALTY
+        if enemies_aiming_count > 1: total_reward += W_MULTIPLE_THREATS_PENALTY # NOVO
         if is_combat_mode: total_reward += W_COMBAT_SURVIVAL_BONUS
+        
         if player_zone != -1 and not cleared_zones[player_zone] and not enemies_by_zone[player_zone]:
             cleared_zones[player_zone] = True
             bonus = W_ZONE_CLEAR_BONUSES[player_zone]
             total_reward += bonus
             training_logger.info(f"  -> ZONA {player_zone + 1} LIMPA! Bônus: +{bonus}")
+        
         game.make_action(actions[action_index], FRAME_SKIP)
+        
         damage_delta = game.get_game_variable(vzd.GameVariable.DAMAGECOUNT) - damage_dealt_before_action
         if damage_delta > 0: total_reward += W_DAMAGE_DEALT_BONUS * damage_delta
         current_ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
@@ -211,12 +224,14 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
             total_reward += (W_COMBAT_DAMAGE_PENALTY * health_lost) * urgency_multiplier
         last_health = current_health
         last_ammo = current_ammo
+    
     if game.is_player_dead():
         num_zones_cleared = sum(cleared_zones)
         death_penalty_final = DEATH_PENALTY_BASE + (num_zones_cleared * DEATH_PENALTY_ZONE_REDUCTION)
         total_reward += death_penalty_final
         training_logger.info(f"  -> Agente morreu após limpar {num_zones_cleared} zonas. Penalidade: {death_penalty_final:.2f}")
     elif game.is_episode_finished():
+        total_reward += W_SURVIVAL_BONUS
         final_health = game.get_game_variable(vzd.GameVariable.HEALTH)
         final_ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
         total_reward += W_HEALTH_PRESERVATION_BONUS * final_health
@@ -232,11 +247,10 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
     return total_reward
 
 # ==============================================================================
-# 3. ALGORITMO GENÉTICO
+# 3. ALGORITMO GENÉTICO E 4. LOOP PRINCIPAL
 # ==============================================================================
 def tournament_selection(population):
     return max(random.sample(population, TOURNAMENT_SIZE), key=lambda x: x['fitness'])
-
 def two_point_crossover(p1_genome, p2_genome):
     genome_len = len(p1_genome);
     if genome_len < 3: return p1_genome.copy(), p2_genome.copy()
@@ -249,14 +263,11 @@ def two_point_crossover(p1_genome, p2_genome):
     child1_genome = np.array(p1_list[:start_point] + p2_list[start_point:end_point] + p1_list[end_point:])
     child2_genome = np.array(p2_list[:start_point] + p1_list[start_point:end_point] + p2_list[end_point:])
     return child1_genome, child2_genome
-
 def mutate(genome, rate):
     mutated_genome = genome.copy()
     for i in range(len(mutated_genome)):
         if random.random() < rate: mutated_genome[i] += random.gauss(0, 0.2)
     return mutated_genome
-    
-# ALTERADO: A função generate_new_population não precisa mais da lógica de hipermutação
 def generate_new_population(old_pop, mut_rate):
     sorted_pop = sorted(old_pop, key=lambda x: x['fitness'], reverse=True)
     new_pop = [sorted_pop[i] for i in range(ELITISM_COUNT)]
@@ -267,10 +278,6 @@ def generate_new_population(old_pop, mut_rate):
         if len(new_pop) < POPULATION_SIZE:
             new_pop.append({'genome': mutate(c2_g, mut_rate), 'fitness': None})
     return new_pop
-    
-# ==============================================================================
-# 4. LOOP PRINCIPAL DE EXECUÇÃO
-# ==============================================================================
 if __name__ == "__main__":
     game_instance, button_map_for_rewards = initialize_game()
     possible_actions, _ = generate_action_space(game_instance)
@@ -282,48 +289,36 @@ if __name__ == "__main__":
     genome_length = temp_nn.total_weights
     training_logger.info(f"Arquitetura da Rede: {NN_INPUT_SIZE} -> {NN_HIDDEN_SIZE} -> {NN_OUTPUT_SIZE}")
     training_logger.info(f"Tamanho do Genoma (Pesos): {genome_length}")
-    
     current_population = create_initial_population(genome_length)
     best_fitness_overall = -float('inf')
     generations_without_improvement = 0
     generation = 0
-    
     while True:
         training_logger.info(f"\n{'='*20} GERAÇÃO {generation} {'='*20}")
-
-        # ALTERADO: Lógica de mutação decrescente
         decay_progress = min(1.0, generation / MUTATION_DECAY_GENERATIONS)
         current_mutation_rate = MAX_MUTATION_RATE - (MAX_MUTATION_RATE - MIN_MUTATION_RATE) * decay_progress
         training_logger.info(f"Taxa de Mutação para esta Geração: {current_mutation_rate:.4f}")
-
         start_time = time.time()
         for ind in current_population:
             if ind['fitness'] is None:
                 ind['fitness'] = evaluate_individual(ind['genome'], game_instance, possible_actions, button_map_for_rewards, nn_config)
-        
         eval_time = time.time() - start_time
         training_logger.info(f"Avaliação de {POPULATION_SIZE} indivíduos concluída em {eval_time:.2f}s.")
-        
         sorted_population = sorted(current_population, key=lambda x: x['fitness'], reverse=True)
         current_best_fitness = sorted_population[0]['fitness']
         training_logger.info(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
-        
-        if current_best_fitness > best_fitness_overall + 1.0: # Um limiar de melhoria mínimo
+        if current_best_fitness > best_fitness_overall + 1.0:
             best_fitness_overall = current_best_fitness
             generations_without_improvement = 0
             training_logger.info(f"✨ Nova melhoria significativa! Melhor fitness geral: {best_fitness_overall:.2f}")
             np.save(f'best_genome_gen_{generation}.npy', sorted_population[0]['genome'])
         else:
             generations_without_improvement += 1
-            
         training_logger.info(f"Gerações estagnadas: {generations_without_improvement}/{STAGNATION_LIMIT}")
-        
         if generations_without_improvement >= STAGNATION_LIMIT:
             training_logger.info(f"CRITÉRIO DE PARADA ATINGIDO: Limite de estagnação.")
             break
-            
         current_population = generate_new_population(sorted_population, current_mutation_rate)
         generation += 1
-        
     training_logger.info("\n" + "="*50 + "\nEvolução finalizada.\n" + "="*50)
     game_instance.close()
