@@ -1,90 +1,199 @@
 import vizdoom as vzd
 import numpy as np
 import time
-from itertools import product
+import math
+import os
+import glob
+import logging # NOVO: Biblioteca para logging
+from NeuralNetwork import NeuralNetwork
 
-# --- Configuração do ViZDoom ---
-SCENARIO_PATH = "deadly_corridor.cfg"  # Nome do arquivo de configuração do cenário
-GENOME_LENGTH = 3000  # Número máximo de ações por episódio
+# ==============================================================================
+# NOVO: CONFIGURAÇÃO DO LOGGER
+# ==============================================================================
+def setup_logger(name, log_file, level=logging.INFO):
+    """Configura um logger para salvar em arquivo e mostrar no console."""
+    formatter = logging.Formatter('%(message)s')
+    
+    # Handler para o arquivo
+    file_handler = logging.FileHandler(log_file, mode='a') # 'a' para adicionar ao log a cada execução
+    file_handler.setFormatter(formatter)
 
+    # Handler para o console
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    
+    if not logger.handlers:
+        logger.addHandler(file_handler)
+        logger.addHandler(stream_handler)
+    
+    return logger
+
+demo_logger = setup_logger('demo_logger', 'demonstration_log.txt')
+
+# ==============================================================================
+# 1. PARÂMETROS GLOBAIS (SINCRONIZADOS COM main.py)
+# ==============================================================================
+SCENARIO_PATH = "deadly_corridor.cfg"
+FRAME_SKIP = 4
+NN_INPUT_SIZE = 9
+NN_HIDDEN_SIZE = 16
+ENEMY_NAMES = {'Zombieman', 'ShotgunGuy'}
+ENEMY_THREAT_LEVELS = { 'Zombieman': 1.0, 'ShotgunGuy': 3.0 }
+ARMOR_POSITION = np.array([1312.0, 0.0])
+ZONE_BOUNDS = [ (0, 450), (451, 900), (901, 1400) ]
+
+# ==============================================================================
+# 2. FUNÇÕES AUXILIARES (IDÊNTICAS A main.py)
+# ==============================================================================
 def generate_action_space(game):
-    # ... (código inalterado)
-    buttons = game.get_available_buttons()
-    button_indices = {button.name: i for i, button in enumerate(buttons)}
-    num_buttons = len(buttons)
-    conflict_groups = [
-        {'MOVE_FORWARD', 'MOVE_BACKWARD'},
-        {'TURN_LEFT', 'TURN_RIGHT'},
-        {'MOVE_LEFT', 'MOVE_RIGHT'}
+    actions = [
+        [0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
+        [1, 0, 0, 0, 0, 0, 0], [1, 1, 0, 0, 0, 0, 0]
     ]
-    options = []
-    independent_buttons = set(button_indices.keys())
-    for group in conflict_groups:
-        group_options = [()]
-        for button_name in group:
-            if button_name in button_indices:
-                group_options.append((button_indices[button_name],))
-                independent_buttons.discard(button_name)
-        options.append(group_options)
-    for button_name in independent_buttons:
-        options.append([(), (button_indices[button_name],)])
-    action_combinations = list(product(*options))
-    final_actions = []
-    for combo in action_combinations:
-        action_list = [0] * num_buttons
-        for button_set in combo:
-            for button_index in button_set:
-                action_list[button_index] = 1
-        if any(action_list):
-            final_actions.append(action_list)
-    print(f"Espaço de ações gerado com {len(final_actions)} ações complexas.")
-    return final_actions
+    demo_logger.info(f"ESPAÇO DE AÇÕES SIMPLIFICADO USADO: {len(actions)} ações.")
+    return actions
 
-# Função para inicializar o jogo
-def initialize_game():
-    print("Inicializando ViZDoom...")
+def initialize_game_for_visualization():
+    demo_logger.info("Inicializando ViZDoom para visualização...")
     game = vzd.DoomGame()
     game.load_config(SCENARIO_PATH)
-
-    # Roda o jogo com a janela visível para demonstração
     game.set_window_visible(True)
     game.set_mode(vzd.Mode.PLAYER)
-    game.set_depth_buffer_enabled(True)
+    game.set_depth_buffer_enabled(True) 
     game.set_labels_buffer_enabled(True)
-    game.set_screen_format(vzd.ScreenFormat.BGR24)
-    game.set_screen_resolution(vzd.ScreenResolution.RES_800X600)
-    game.set_doom_skill(1)
+    game.set_doom_skill(3)
     game.init()
+    return game
 
-    # Define as ações possíveis que o agente pode tomar
-    actions = generate_action_space(game)
-    return game, actions
+def get_current_zone(player_pos):
+    player_x = player_pos[0]
+    for i, (x_min, x_max) in enumerate(ZONE_BOUNDS):
+        if x_min <= player_x <= x_max:
+            return i
+    return -1
 
-# Função para demonstrar o melhor indivíduo
-def demonstrate_best_individual():
-    # Carrega o genoma do melhor indivíduo salvo
-    best_genome = np.load('best_genome.npy')
+def get_entities_and_zones(state, player_pos):
+    enemies_by_zone = {i: [] for i in range(len(ZONE_BOUNDS))}
+    is_targeted = 0.0
+    all_enemies = []
+    if state and state.labels:
+        for label in state.labels:
+            if label.object_name in ENEMY_NAMES:
+                enemy_pos = np.array([label.object_position_x, label.object_position_y])
+                enemy_zone = get_current_zone(enemy_pos)
+                enemy_data = {'pos': enemy_pos, 'name': label.object_name}
+                all_enemies.append(enemy_data)
+                if enemy_zone != -1:
+                    enemies_by_zone[enemy_zone].append(enemy_data)
+                vec_enemy_to_player = player_pos - enemy_pos
+                angle_enemy_to_player = math.degrees(math.atan2(vec_enemy_to_player[1], vec_enemy_to_player[0]))
+                angle_diff = (label.object_angle - angle_enemy_to_player + 180) % 360 - 180
+                if abs(angle_diff) < 15.0:
+                    is_targeted = 1.0
+    return all_enemies, enemies_by_zone, is_targeted
 
-    # Inicializa o jogo e as ações possíveis
-    game, actions = initialize_game()
+# ==============================================================================
+# 3. FUNÇÃO DE VISUALIZAÇÃO
+# ==============================================================================
 
-    print("Iniciando demonstração do melhor indivíduo...")
+def run_visualization(game, agent_nn, actions):
+    demo_logger.info("Iniciando visualização...")
     game.new_episode()
+    cleared_zones = [False] * len(ZONE_BOUNDS)
 
-    for action_index in best_genome:
-        if game.is_episode_finished():
-            break
+    while not game.is_episode_finished():
+        state = game.get_state()
+        if state is None: continue
+        
+        player_pos = np.array([game.get_game_variable(vzd.GameVariable.POSITION_X), game.get_game_variable(vzd.GameVariable.POSITION_Y)])
+        all_enemies, enemies_by_zone, is_being_aimed_at = get_entities_and_zones(state, player_pos)
+        player_zone = get_current_zone(player_pos)
+        
+        if player_zone != -1 and not cleared_zones[player_zone] and not enemies_by_zone[player_zone]:
+             cleared_zones[player_zone] = True
 
-        # Executa a ação correspondente ao índice
-        action_to_perform = actions[action_index]
-        game.make_action(action_to_perform)
+        is_combat_mode = len(all_enemies) > 0
+        tactical_objective = ARMOR_POSITION
+        
+        if player_zone != -1 and not cleared_zones[player_zone] and enemies_by_zone[player_zone]:
+            highest_priority_score = -1; best_target = None
+            for enemy in enemies_by_zone[player_zone]:
+                dist = np.linalg.norm(enemy['pos'] - player_pos)
+                threat = ENEMY_THREAT_LEVELS.get(enemy['name'], 1.0)
+                priority = threat / (dist + 1e-6)
+                if priority > highest_priority_score:
+                    highest_priority_score = priority; best_target = enemy
+            if best_target: tactical_objective = best_target['pos']
+        else:
+            next_zone_found = False
+            for i in range(len(ZONE_BOUNDS)):
+                if not cleared_zones[i]:
+                    zone_x_min, zone_x_max = ZONE_BOUNDS[i]
+                    tactical_objective = np.array([(zone_x_min + zone_x_max) / 2, 0.0])
+                    next_zone_found = True
+                    break
+            if not next_zone_found: tactical_objective = ARMOR_POSITION
 
-        # Aguarda um pequeno intervalo para visualização
-        time.sleep(1.0 / 60.0)
+        dist_to_objective, angle_to_objective = 0.0, 0.0
+        if tactical_objective is not None:
+            delta = tactical_objective - player_pos
+            dist_to_objective = np.linalg.norm(delta)
+            target_angle = math.degrees(math.atan2(delta[1], delta[0]))
+            angle_diff = (game.get_game_variable(vzd.GameVariable.ANGLE) - target_angle + 180) % 360 - 180
+            angle_to_objective = angle_diff / 180.0
+        
+        nn_input = [
+            game.get_game_variable(vzd.GameVariable.HEALTH) / 100.0,
+            game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO) / 52.0,
+            1.0 if is_combat_mode else 0.0,
+            dist_to_objective / 1000.0, angle_to_objective,
+            float(cleared_zones[0]), float(cleared_zones[1]), float(cleared_zones[2]),
+            is_being_aimed_at
+        ]
 
-    print("Demonstração concluída.")
-    game.close()
+        action_scores = agent_nn.forward(nn_input)
+        action_index = np.argmax(action_scores)
+        action = actions[action_index]
+        game.make_action(action, FRAME_SKIP)
+        time.sleep(0.028)
 
+    demo_logger.info(f"Episódio finalizado. Zonas Limpas: {cleared_zones}")
+    demo_logger.info(f"Pontuação: {game.get_total_reward():.2f}")
+    demo_logger.info(f"Total de Kills: {game.get_game_variable(vzd.GameVariable.KILLCOUNT)}")
+    demo_logger.info(f"Munição Restante: {game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)}")
+    demo_logger.info(f"Vida Restante: {game.get_game_variable(vzd.GameVariable.HEALTH)}")
+
+
+# ==============================================================================
+# 4. BLOCO PRINCIPAL DE EXECUÇÃO
+# ==============================================================================
 if __name__ == "__main__":
-    while True:
-        demonstrate_best_individual()
+    list_of_files = glob.glob('best_genome_gen_*.npy')
+    if not list_of_files:
+        demo_logger.info("ERRO: Nenhum arquivo de genoma salvo ('best_genome_gen_*.npy') foi encontrado.")
+        exit()
+        
+    latest_file = max(list_of_files, key=os.path.getctime)
+    demo_logger.info(f"{'='*20}\nCarregando o melhor genoma de: {latest_file}\n{'='*20}")
+    
+    best_genome = np.load(latest_file)
+
+    game = initialize_game_for_visualization()
+    possible_actions = generate_action_space(game)
+    NN_OUTPUT_SIZE = len(possible_actions)
+    nn_config = (NN_INPUT_SIZE, NN_HIDDEN_SIZE, NN_OUTPUT_SIZE)
+    agent_network = NeuralNetwork(*nn_config)
+    agent_network.set_weights_from_flat(best_genome)
+    
+    try:
+        while True:
+            run_visualization(game, agent_network, possible_actions)
+            demo_logger.info("\nReiniciando em 3 segundos...")
+            time.sleep(3)
+    except Exception as e:
+        demo_logger.error(f"Ocorreu um erro durante a visualização: {e}")
+    finally:
+        game.close()
