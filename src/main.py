@@ -81,6 +81,7 @@ def calculate_fitness(game_interface: GameInterface, individuals: List[Individua
 
 if __name__ == "__main__":
 
+    genetic = Genetic(ELITISM_COUNT, POPULATION_SIZE, TOURNAMENT_SIZE, MUTATION_RATE)
     best_fitness_overall = -float('inf')
     generations_without_improvement = 0
     moviments = all_valid_moviments()
@@ -118,7 +119,7 @@ if __name__ == "__main__":
             break
 
         print("Gerando a próxima população...")
-        genetic = Genetic(ELITISM_COUNT, POPULATION_SIZE, TOURNAMENT_SIZE, MUTATION_RATE)
+        
         current_population = genetic.generate_new_population(sorted_population, moviments, generations_without_improvement > CONVERGENCE)
 
     print("\n" + "="*50)

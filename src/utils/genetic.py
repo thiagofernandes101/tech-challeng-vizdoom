@@ -56,6 +56,7 @@ class Genetic():
         for (i_1, gene_1), (i_2, gene_2) in zip(negative_gene_1, negative_gene_2):
             parent1_genome[i_1] = Genome(gene_2.movement)
             parent2_genome[i_2] = Genome(gene_1.movement)
+        return parent1_genome, parent2_genome
 
     def __mutate(self, genomes: List[Genome], movements: List[Movement]) -> List[Genome]:
         mutated_genome: List[Genome] = []
