@@ -36,6 +36,8 @@ class GameInterface():
         return self.__game.is_episode_finished()
     
     def get_fitness(self)-> float:
+        print(f'distância do objettivo {self.__distance - self.__current_distance}')
+        print(f'kills: {self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)}')
         return (
             (0.5 * self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)) +
             (1.0 * self.__game.get_game_variable(vzd.GameVariable.HEALTH)) +

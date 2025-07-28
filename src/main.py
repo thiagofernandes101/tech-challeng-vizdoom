@@ -120,12 +120,12 @@ if __name__ == "__main__":
 
         print("Gerando a próxima população...")
         
-        current_population = genetic.generate_new_population(sorted_population, moviments, generations_without_improvement > CONVERGENCE)
+        individuals = genetic.generate_new_population(sorted_population, moviments, generations_without_improvement > CONVERGENCE)
 
     print("\n" + "="*50)
     print("Evolução finalizada.")
     
-    final_best_individual = sorted(current_population, key=lambda x: x['fitness'], reverse=True)[0]
+    final_best_individual = sorted(individuals, key=lambda x: x.fitness, reverse=True)[0]
     print(f"Melhor fitness final alcançado: {final_best_individual['fitness']:.2f}")
     print(f"Executado por {len(fitness_history)} gerações.")
 

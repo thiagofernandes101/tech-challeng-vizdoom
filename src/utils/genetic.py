@@ -16,13 +16,9 @@ class Genetic():
     def generate_new_population(self, old_population: List[Individual], movements: List[Movement], populate_stagnated: bool):
         new_population = old_population[:self.__elitism_count]
 
-        if populate_stagnated:
-            del old_population[-self.__elitism_count:]
-        else:
+        if not populate_stagnated:
             del old_population[:self.__elitism_count]
-            del old_population[-self.__elitism_count:]
 
-        del old_population[:self.__elitism_count]
         del old_population[-self.__elitism_count:]
 
         while len(new_population) < self.__populate_size:
