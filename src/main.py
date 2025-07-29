@@ -4,6 +4,7 @@ import random
 import time
 import math
 import logging
+from itertools import product
 from NeuralNetwork import NeuralNetwork
 
 # ==============================================================================
@@ -25,19 +26,20 @@ def setup_logger(name, log_file, level=logging.INFO):
 training_logger = setup_logger('training_logger', 'training_log.txt')
 
 # ==============================================================================
-# 1. PARÂMETROS GLOBAIS (FILOSOFIA "RECUO TÁTICO")
+# 1. PARÂMETROS GLOBAIS (FILOSOFIA "CONSCIÊNCIA ESTRATÉGICA")
 # ==============================================================================
 POPULATION_SIZE = 200
 SCENARIO_PATH = "deadly_corridor.cfg"
 FRAME_SKIP = 4
-NN_INPUT_SIZE = 9
-NN_HIDDEN_SIZE = 16
+NN_INPUT_SIZE = 11
+NN_HIDDEN_SIZE = 20 # ALTERADO: Maior capacidade para processar estratégias complexas
 
 ENEMY_NAMES = {'Zombieman', 'ShotgunGuy'}
 ENEMY_THREAT_LEVELS = { 'Zombieman': 1.0, 'ShotgunGuy': 3.0 }
 ARMOR_POSITION = np.array([1312.0, 0.0])
 ZONE_BOUNDS = [ (0, 450), (451, 900), (901, 1400) ]
 MAX_AMMO = 52
+LOW_HEALTH_THRESHOLD = 40.0 # Aumentado para incentivar o recuo mais cedo
 
 DEATH_PENALTY_BASE = -7000.0 
 DEATH_PENALTY_ZONE_REDUCTION = 1500.0
@@ -47,46 +49,65 @@ W_ARMOR_PICKUP_ALONE = 500.0
 W_LEVEL_INCOMPLETE_PENALTY = -3000.0
 W_ZONE_CLEAR_BONUSES = [ 2000.0, 3000.0, 4000.0 ]
 W_PROGRESS_TOWARDS_OBJECTIVE = 150.0
-
-# ALTERADO: Recompensas de sobrevivência aumentadas para forçar comportamento defensivo
 W_COMBAT_SURVIVAL_BONUS = 3.0
 W_HEALTH_PRESERVATION_BONUS = 35.0
-
 W_DAMAGE_DEALT_BONUS = 30.0
 W_AMMO_EFFICIENCY_BONUS = 200.0
 W_AMMO_CONSERVED_BONUS = 15.0
 W_COMBAT_DAMAGE_PENALTY = -25.0
 W_BEING_AIMED_AT_PENALTY = -30.0
+W_MULTIPLE_THREATS_PENALTY = -40.0
+W_TARGET_ISOLATION_BONUS = 25.0
 W_TIME_PENALTY = -1.0
 W_WASTED_SHOT_PENALTY = -20.0
 W_STAGNATION_PENALTY = -100.0
 STAGNATION_TICKS_THRESHOLD = 40
 STAGNATION_DISTANCE_THRESHOLD = 15.0
 
-# NOVO: Penalidade por exposição a múltiplos inimigos
-W_MULTIPLE_THREATS_PENALTY = -50.0
-
-ELITISM_COUNT = 2
+# ALTERADO: Parâmetros genéticos focados em refinamento
+ELITISM_COUNT = 3
 TOURNAMENT_SIZE = 3
-STAGNATION_LIMIT = 100
+STAGNATION_LIMIT = 150
 IMPROVEMENT_THRESHOLD = 0.05
-MAX_MUTATION_RATE = 0.10
+MAX_MUTATION_RATE = 0.08 # Reduzida para focar em refinamento
 MIN_MUTATION_RATE = 0.01
-MUTATION_DECAY_GENERATIONS = 200
+MUTATION_DECAY_GENERATIONS = 300
 
 # ==============================================================================
 # 2. FUNÇÕES AUXILIARES E DE AVALIAÇÃO
 # ==============================================================================
 def generate_action_space(game):
-    actions = [
-        [0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-        [1, 0, 0, 0, 0, 0, 0], [1, 1, 0, 0, 0, 0, 0]
-    ]
     buttons = game.get_available_buttons()
     button_indices = {button.name: i for i, button in enumerate(buttons)}
-    button_map = { 'ATTACK': button_indices.get('ATTACK'), 'MOVE_FORWARD': button_indices.get('MOVE_FORWARD') }
-    training_logger.info(f"ESPAÇO DE AÇÕES SIMPLIFICADO: {len(actions)} ações.")
-    return actions, button_map
+    num_buttons = len(buttons)
+    conflict_groups = [
+        {'MOVE_FORWARD', 'MOVE_BACKWARD'}, {'TURN_LEFT', 'TURN_RIGHT'}, {'MOVE_LEFT', 'MOVE_RIGHT'}
+    ]
+    independent_buttons = set(button_indices.keys())
+    for group in conflict_groups:
+        for button_name in group:
+            independent_buttons.discard(button_name)
+    options = []
+    for group in conflict_groups:
+        group_options = [()]
+        for button_name in group:
+            if button_name in button_indices:
+                group_options.append((button_indices[button_name],))
+        options.append(group_options)
+    for button_name in independent_buttons:
+        if button_name in button_indices:
+            options.append([(), (button_indices[button_name],)])
+    action_combinations = list(product(*options))
+    final_actions = []
+    for combo in action_combinations:
+        action_list = [0] * num_buttons
+        for button_set in combo:
+            for button_index in button_set:
+                action_list[button_index] = 1
+        if any(action_list):
+            final_actions.append(action_list)
+    training_logger.info(f"ESPAÇO DE AÇÕES TÁTICO GERADO: {len(final_actions)} ações.")
+    return final_actions, button_indices
 
 def initialize_game():
     training_logger.info("Inicializando instância única do ViZDoom...")
@@ -114,7 +135,7 @@ def get_current_zone(player_pos):
 
 def get_entities_and_zones(state, player_pos):
     enemies_by_zone = {i: [] for i in range(len(ZONE_BOUNDS))}
-    enemies_aiming_count = 0 # ALTERADO: Agora contamos quantos inimigos estão mirando
+    enemies_aiming_count = 0
     all_enemies = []
     if state and state.labels:
         for label in state.labels:
@@ -147,16 +168,28 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
         if game.is_episode_finished(): break
         state = game.get_state()
         if state is None: continue
+        
+        current_health = game.get_game_variable(vzd.GameVariable.HEALTH)
+        current_ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
         player_pos = np.array([game.get_game_variable(vzd.GameVariable.POSITION_X), game.get_game_variable(vzd.GameVariable.POSITION_Y)])
-        all_enemies, enemies_by_zone, enemies_aiming_count = get_entities_and_zones(state, player_pos) # ALTERADO
+        all_enemies, enemies_by_zone, enemies_aiming_count = get_entities_and_zones(state, player_pos)
         is_being_aimed_at = 1.0 if enemies_aiming_count > 0 else 0.0
         
         player_zone = get_current_zone(player_pos)
         is_combat_mode = len(all_enemies) > 0
+        is_low_health = 1.0 if current_health < LOW_HEALTH_THRESHOLD else 0.0
+        
         tactical_objective = ARMOR_POSITION
-        if player_zone != -1 and not cleared_zones[player_zone] and enemies_by_zone[player_zone]:
+        active_threats_in_zone = []
+        if player_zone != -1:
+            active_threats_in_zone = enemies_by_zone[player_zone]
+
+        if is_low_health and player_zone > 0 and active_threats_in_zone:
+            prev_zone_x_min, prev_zone_x_max = ZONE_BOUNDS[player_zone - 1]
+            tactical_objective = np.array([(prev_zone_x_min + prev_zone_x_max) / 2, 0.0])
+        elif player_zone != -1 and not cleared_zones[player_zone] and active_threats_in_zone:
             highest_priority_score = -1; best_target = None
-            for enemy in enemies_by_zone[player_zone]:
+            for enemy in active_threats_in_zone:
                 dist = np.linalg.norm(enemy['pos'] - player_pos)
                 threat = ENEMY_THREAT_LEVELS.get(enemy['name'], 1.0)
                 priority = threat / (dist + 1e-6)
@@ -182,13 +215,14 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
             angle_to_objective = angle_diff / 180.0
         
         nn_input = [
-            last_health / 100.0, last_ammo / 52.0, 1.0 if is_combat_mode else 0.0,
+            current_health / 100.0, current_ammo / MAX_AMMO, 1.0 if is_combat_mode else 0.0,
             dist_to_objective / 1000.0, angle_to_objective,
             float(cleared_zones[0]), float(cleared_zones[1]), float(cleared_zones[2]),
-            is_being_aimed_at
+            is_being_aimed_at, len(active_threats_in_zone) / 2.0, is_low_health
         ]
         action_scores = agent_nn.forward(nn_input)
         action_index = np.argmax(action_scores)
+        
         total_reward += W_TIME_PENALTY
         damage_dealt_before_action = game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
         
@@ -198,32 +232,40 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
         last_dist_to_objective = dist_to_objective
         
         if is_being_aimed_at > 0: total_reward += W_BEING_AIMED_AT_PENALTY
-        if enemies_aiming_count > 1: total_reward += W_MULTIPLE_THREATS_PENALTY # NOVO
+        if enemies_aiming_count > 1: total_reward += W_MULTIPLE_THREATS_PENALTY
         if is_combat_mode: total_reward += W_COMBAT_SURVIVAL_BONUS
         
+        if is_combat_mode and len(active_threats_in_zone) == 1:
+            total_reward += W_TARGET_ISOLATION_BONUS
+
         if player_zone != -1 and not cleared_zones[player_zone] and not enemies_by_zone[player_zone]:
             cleared_zones[player_zone] = True
-            bonus = W_ZONE_CLEAR_BONUSES[player_zone]
-            total_reward += bonus
-            training_logger.info(f"  -> ZONA {player_zone + 1} LIMPA! Bônus: +{bonus}")
+            base_bonus = W_ZONE_CLEAR_BONUSES[player_zone]
+            # NOVO: Bônus de eficiência contextual
+            health_multiplier = 1 + (current_health / 100.0) # de 1.0 a 2.0
+            ammo_multiplier = 1 + (current_ammo / MAX_AMMO)   # de 1.0 a 2.0
+            final_bonus = base_bonus * health_multiplier * ammo_multiplier
+            total_reward += final_bonus
+            training_logger.info(f"  -> ZONA {player_zone + 1} LIMPA! Bônus: +{final_bonus:.2f} (Base: {base_bonus})")
         
         game.make_action(actions[action_index], FRAME_SKIP)
         
         damage_delta = game.get_game_variable(vzd.GameVariable.DAMAGECOUNT) - damage_dealt_before_action
         if damage_delta > 0: total_reward += W_DAMAGE_DEALT_BONUS * damage_delta
-        current_ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
-        if current_ammo < last_ammo and damage_delta > 0:
+        
+        ammo_after_action = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
+        if ammo_after_action < last_ammo and damage_delta > 0:
             total_reward += W_AMMO_EFFICIENCY_BONUS
-        elif current_ammo < last_ammo and damage_delta == 0:
-             urgency_multiplier = 1 + (MAX_AMMO - current_ammo) / MAX_AMMO
+        elif ammo_after_action < last_ammo and damage_delta == 0:
+             urgency_multiplier = 1 + (MAX_AMMO - ammo_after_action) / MAX_AMMO
              total_reward += W_WASTED_SHOT_PENALTY * urgency_multiplier
-        current_health = game.get_game_variable(vzd.GameVariable.HEALTH)
+        
         health_lost = last_health - current_health
         if health_lost > 0:
             urgency_multiplier = 1 + (100 - current_health) / 100.0
             total_reward += (W_COMBAT_DAMAGE_PENALTY * health_lost) * urgency_multiplier
         last_health = current_health
-        last_ammo = current_ammo
+        last_ammo = ammo_after_action
     
     if game.is_player_dead():
         num_zones_cleared = sum(cleared_zones)

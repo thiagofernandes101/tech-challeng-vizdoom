@@ -1,0 +1,804 @@
+
+====================
+Carregando o melhor genoma de: best_genome_gen_52.npy
+====================
+Inicializando ViZDoom para visualização...
+ESPAÇO DE AÇÕES SIMPLIFICADO USADO: 5 ações.
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2278.67
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 16.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 969.50
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 671.31
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2284.71
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: 40.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1123.82
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1042.59
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2283.67
+Total de Kills: 2.0
+Munição Restante: 26.0
+Vida Restante: 64.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 840.50
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -20.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2281.90
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 40.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 764.57
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1090.46
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 628.52
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -20.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2277.37
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: 16.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1042.12
+Total de Kills: 2.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 895.18
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 626.41
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 571.32
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 873.37
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -20.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 725.68
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1108.19
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 711.77
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 572.00
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2283.81
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 16.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 668.84
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1027.33
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1076.00
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -20.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 862.06
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 507.66
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1026.21
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 541.53
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 666.54
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2281.16
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 4.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 604.24
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1041.06
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2276.99
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 46.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 916.49
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 650.28
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1140.71
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2278.67
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 22.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 958.72
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 621.99
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1130.68
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 664.70
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 595.07
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1019.99
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1080.77
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 701.41
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1133.11
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1022.74
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2278.80
+Total de Kills: 2.0
+Munição Restante: 26.0
+Vida Restante: 22.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2279.58
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 88.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 949.83
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2283.06
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 34.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2277.84
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 40.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1117.61
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 950.47
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 533.27
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2279.74
+Total de Kills: 2.0
+Munição Restante: 26.0
+Vida Restante: 82.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, False, False]
+Pontuação: 432.00
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -26.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 995.12
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1014.75
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2277.47
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: 28.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1046.50
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1137.98
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 526.83
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1118.51
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 983.05
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -20.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2277.21
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 22.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, False, False]
+Pontuação: 241.27
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2284.62
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: 28.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2278.34
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 46.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2281.46
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: 10.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 579.46
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 951.41
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1104.68
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 732.10
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 971.33
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1050.52
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 684.14
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1019.02
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1010.93
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2282.64
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: 10.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1022.34
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -20.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 957.73
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 611.56
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 607.53
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 903.61
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 693.69
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1073.21
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1024.03
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2279.73
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: 10.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 977.87
+Total de Kills: 2.0
+Munição Restante: 26.0
+Vida Restante: -2.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2276.67
+Total de Kills: 2.0
+Munição Restante: 26.0
+Vida Restante: 4.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1013.66
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -14.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, False]
+Pontuação: 547.03
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1016.70
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -8.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2282.00
+Total de Kills: 2.0
+Munição Restante: 26.0
+Vida Restante: 34.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1126.61
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: -20.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 2280.29
+Total de Kills: 0.0
+Munição Restante: 26.0
+Vida Restante: 10.0
+
+Reiniciando em 3 segundos...
+Iniciando visualização...
+Episódio finalizado. Zonas Limpas: [True, True, True]
+Pontuação: 1020.66
+Total de Kills: 1.0
+Munição Restante: 26.0
+Vida Restante: -20.0
