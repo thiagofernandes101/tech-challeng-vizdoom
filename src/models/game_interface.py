@@ -1,8 +1,18 @@
+from enum import Enum
 import vizdoom as vzd
 
 from models.movement import Movement
 from models.step_evaluation import StepEvaluation
+from models.game_element import ElementFactory, FakeLabel, GameElement, Player
 from utils.calc import Calc
+
+class GameInfo(Enum):
+    HEALTH = vzd.GameVariable.HEALTH
+    ITEMS_COUNT = vzd.GameVariable.ITEMCOUNT
+    DAMAGE_COUNT = vzd.GameVariable.DAMAGECOUNT
+    KILL_COUNT = vzd.GameVariable.KILLCOUNT
+    DAMAGE_TAKEN = vzd.GameVariable.DAMAGE_TAKEN
+    WEAPON_AMMO = vzd.GameVariable.SELECTED_WEAPON_AMMO
 
 class GameInterface():
 
@@ -15,6 +25,7 @@ class GameInterface():
             vzd.POSITION_X,
             vzd.POSITION_Y,
             vzd.ANGLE,
+            vzd.POSITION_Z
         ])
         self.__game.set_doom_skill(1)
         self.__game.init()
@@ -26,7 +37,6 @@ class GameInterface():
 
     def start_episode(self)-> None:
         self.__distance = Calc.distance(0.0, 0.0, self.__target_x, self.__target_y)
-        self.__episode_progress = 0.0
         self.__wrong_shot = 0
         self.__game.new_episode()
         for _ in range(7):
@@ -37,38 +47,81 @@ class GameInterface():
     
     def get_fitness(self)-> float:
         print(f'maior espaço percorrido {self.__distance - self.__current_distance}')
-        if self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT) > 4:
-            print(f'kills: {self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)}')
+        if self.get_state_info(GameInfo.KILL_COUNT) > 4:
+            print(f'kills: {self.get_state_info(GameInfo.KILL_COUNT)}')
         return (
-            (0.5 * self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)) +
-            (1.0 * self.__game.get_game_variable(vzd.GameVariable.HEALTH)) +
-            (0.5 * self.__game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)) +
-            (0.5 * self.__game.get_game_variable(vzd.GameVariable.ITEMCOUNT)) +
-            (0.5 * self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)) +
-            (0.5 * self.__game.get_game_variable(vzd.GameVariable.DAMAGE_TAKEN)) +
-            (1.0 * self.__wrong_shot) -
+            (0.5 * self.get_state_info(GameInfo.KILL_COUNT)) +
+            (1.0 * self.get_state_info(GameInfo.HEALTH)) +
+            (0.5 * self.get_state_info(GameInfo.WEAPON_AMMO)) +
+            (0.5 * self.get_state_info(GameInfo.ITEMS_COUNT)) +
+            (0.5 * self.get_state_info(GameInfo.DAMAGE_COUNT)) +
+            (0.5 * self.get_state_info(GameInfo.DAMAGE_TAKEN)) +
+            (1.0 * self.__wrong_shot) +
             (2.0 * (self.__distance - self.__current_distance))
         )
+
+    def get_state_info(self, info: GameInfo)-> float:
+        return self.__game.get_game_variable(info.value)
+
+    __EPISODE_FINISHED = 'O episódio foi finalizado'
+
+    def get_current_y(self)-> float:
+        if (not self.__game.get_state()):
+            raise RuntimeError(self.__EPISODE_FINISHED)
+        return self.__game.get_state().game_variables[1]
+
+    def get_current_x(self)-> float:
+        if (not self.__game.get_state()):
+            raise RuntimeError(self.__EPISODE_FINISHED)
+        return self.__game.get_state().game_variables[0]
+    
+    def get_current_angle(self)-> float:
+        if (not self.__game.get_state()):
+            raise RuntimeError(self.__EPISODE_FINISHED)
+        return self.__game.get_state().game_variables[2]
+    
+    def get_current_z(self)-> float:
+        if (not self.__game.get_state()):
+            raise RuntimeError(self.__EPISODE_FINISHED)
+        return self.__game.get_state().game_variables[3]
+
+    def get_visible_elements(self) -> tuple[list[GameElement], GameElement]:
+        if (not self.__game.get_state()):
+            raise RuntimeError('Elementos indisponíveis')
+        labels = self.__game.get_state().labels
+        elements: list[GameElement] = []
+        player = None
+        for label in labels:
+            element = ElementFactory.create(label)
+            if element is not None:
+                if isinstance(element, Player):
+                    player = element
+                else:
+                    elements.append(element)
+        if player is None:
+            label = FakeLabel(-1, 'DoomPlayer', self.get_current_x(), self.get_current_y(), self.get_current_z(), self.get_current_angle())
+            player = Player(label)
+        return sorted(elements, key=lambda e: Calc.get_distance_between_elements(player, e)), player
 
     def make_action(self, movement: Movement) -> StepEvaluation:
         commands = movement.to_list_command()
         if len(commands) > self.get_avaliable_buttons_amount():
             raise ValueError(f'actions list must have {len(self.get_avaliable_buttons_amount())} but you sent {len(commands)}')
         
-        before_kill_count = self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)
+        before_kill_count = self.get_state_info(GameInfo.KILL_COUNT)
 
         step_evaluation = StepEvaluation(commands, 
                                             before_kill_count, 
-                                            self.__game.get_game_variable(vzd.GameVariable.HEALTH),
-                                            self.__game.get_game_variable(vzd.GameVariable.ITEMCOUNT),
-                                            self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
+                                            self.get_state_info(GameInfo.HEALTH),
+                                            self.get_state_info(GameInfo.ITEMS_COUNT),
+                                            self.get_state_info(GameInfo.DAMAGE_COUNT)
                                         )
         self.__game.make_action(commands)
-        step_evaluation.kills_after = self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT)
-        step_evaluation.health_after = self.__game.get_game_variable(vzd.GameVariable.HEALTH)
-        step_evaluation.items_after = self.__game.get_game_variable(vzd.GameVariable.ITEMCOUNT)
-        step_evaluation.damega_count_after = self.__game.get_game_variable(vzd.GameVariable.DAMAGECOUNT)
-        if movement.attack and before_kill_count == self.__game.get_game_variable(vzd.GameVariable.KILLCOUNT):
+        step_evaluation.kills_after = self.get_state_info(GameInfo.KILL_COUNT)
+        step_evaluation.health_after = self.get_state_info(GameInfo.HEALTH)
+        step_evaluation.items_after = self.get_state_info(GameInfo.ITEMS_COUNT)
+        step_evaluation.damega_count_after = self.get_state_info(GameInfo.DAMAGE_COUNT)
+        if movement.attack and before_kill_count == self.get_state_info(GameInfo.KILL_COUNT):
             self.__wrong_shot +=1
 
         if self.__game.get_state():

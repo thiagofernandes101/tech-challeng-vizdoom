@@ -1,22 +1,23 @@
 from models.movement import Movement
+import numpy as np
 
 
 class Genome:
     def __init__(self, movement: Movement):
-        self._movement = movement
-        self._movement_side_effect = 0
+        self.__movement = movement
+        self.__neural_output = np.empty(0, dtype=np.float32)
 
     @property
     def movement(self) -> Movement:
-        return self._movement
+        return self.__movement
     
     @property
-    def movement_side_effect(self) -> int:
-        return self._movement_side_effect
+    def neural_output(self) -> np.ndarray:
+        return self.__neural_output
     
-    @movement_side_effect.setter
-    def movement_side_effect(self, movement_side_effect: int) -> None:
-        self._movement_side_effect = movement_side_effect
+    @neural_output.setter
+    def neural_output(self, neural_output: np.ndarray) -> None:
+        self.__neural_output = neural_output
 
     def __str__(self) -> str:
-        return f"action: {self._movement} movement_side_effect: {self._movement_side_effect}"
+        return f"action: {self.__movement} neural_output: {self.__neural_output}"

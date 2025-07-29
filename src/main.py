@@ -2,10 +2,13 @@ from itertools import product
 import random
 import time
 from typing import List
-from models.game_interface import GameInterface
+from models.game_interface import GameInfo, GameInterface
 from models.individual import Individual
 from models.movement import Movement
 from models.genome import Genome
+import numpy as np
+from utils.mapper import Mapper
+from utils.simple_nn import SimpleNN
 from utils.genetic import Genetic
 
 MOVEMENT_LIMIT = 4500 
@@ -34,6 +37,9 @@ ELITISM_COUNT = 3
 TOURNAMENT_SIZE = 3 
 MUTATION_RATE = 0.5 
 
+NEURAL_INPUTS = 40
+HIDDEN_SIZE = 222
+
 def initialize_game() -> GameInterface:
     """Cria e configura a instância do jogo ViZDoom."""
     print("Inicializando ViZDoom...")
@@ -59,57 +65,94 @@ def all_valid_moviments() -> list[Movement]:
     print(f"Cardápio de ações definido com {len(movimentos_validos)} movimentos possíveis.")
     return movimentos_validos
 
-def create_initial_population(limit_per_individual: int, possible_movements: List[Movement]) -> List[Individual]:
+def create_initial_population(game_interface: GameInterface, simple_nn: SimpleNN, valids_moves: list[Movement]):
+    ELEMENT_TYPE_MAP = {
+        'Enemy': 1,
+        'Player': 2,
+        'Colectable': 3,
+        'Blood': 4,
+        'Targer': 5,
+    }
     population: list[Individual] = []
     for _ in range(POPULATION_SIZE):
-        movements = random.choices(possible_movements, k=limit_per_individual)
-        population.append(Individual([Genome(movement) for movement in movements]))
+        game_interface.start_episode()
+        individual = Individual()
+        while not game_interface.episode_is_finished():
+            episode_info_vector: list[float] = []
+            episode_info_vector.append(game_interface.get_state_info(GameInfo.HEALTH) / 100)
+            episode_info_vector.append(game_interface.get_state_info(GameInfo.ITEMS_COUNT) / 10)
+            episode_info_vector.append(game_interface.get_state_info(GameInfo.DAMAGE_COUNT) / 100)
+            episode_info_vector.append(game_interface.get_state_info(GameInfo.KILL_COUNT) / 10)
+            episode_info_vector.append(game_interface.get_state_info(GameInfo.DAMAGE_TAKEN) / 100)
+            episode_info_vector.append(game_interface.get_state_info(GameInfo.WEAPON_AMMO) / 100)
+
+            elements, player = game_interface.get_visible_elements()
+
+            episode_info_vector.append(game_interface.get_current_x() / 1000)
+            episode_info_vector.append(game_interface.get_current_y() / 1000)
+            episode_info_vector.append(player.angle / 1000)
+
+            for element in elements:
+                episode_info_vector.append(element.pos_x / 1000)
+                episode_info_vector.append(element.pos_y / 1000)
+                episode_info_vector.append(element.angle / 1000)
+                element_class_name = type(element).__name__
+                type_value = ELEMENT_TYPE_MAP.get(element_class_name, 0)
+                episode_info_vector.append(type_value / 10)
+
+            if len(episode_info_vector) < NEURAL_INPUTS:
+                episode_info_vector += [0.0] * (NEURAL_INPUTS - len(episode_info_vector))
+
+            input_vector = np.array(episode_info_vector).reshape(-1, 1)
+            output = simple_nn.forward(input_vector)
+            genome = Mapper.neural_output_to_moviment(output, valids_moves)
+            genome.neural_output = output
+            individual.inc_genome(genome)
+            game_interface.make_action(genome.movement)
+        individual.fitness = game_interface.get_fitness()
+        population.append(individual)
+
     return population
 
-def calculate_fitness(game_interface: GameInterface, individuals: List[Individual]) -> List[Individual]:
-    for individual in individuals:
-        if individual.evaluated:
-            continue
+def evaluate_mutated_individuals(game_interface: GameInterface, new_generation: list[Individual])-> list[Individual]:
+    for individual in new_generation:
         game_interface.start_episode()
         for genome in individual.genomes:
             if game_interface.episode_is_finished():
-                individual.fitness = game_interface.get_fitness()
                 break
-            step_evaluation = game_interface.make_action(genome.movement)
-            genome.movement_side_effect = step_evaluation.step_results()
-    return individuals
+            game_interface.make_action(genome.movement)
+        individual.fitness = game_interface.get_fitness()
+    return new_generation
 
 if __name__ == "__main__":
 
-    genetic = Genetic(ELITISM_COUNT, POPULATION_SIZE, TOURNAMENT_SIZE, MUTATION_RATE)
+    rng = np.random.default_rng(seed=42)
+    moviments = all_valid_moviments()
+    genetic = Genetic(ELITISM_COUNT, POPULATION_SIZE, TOURNAMENT_SIZE, MUTATION_RATE, moviments, rng)
+    simple_nn = SimpleNN(NEURAL_INPUTS, HIDDEN_SIZE, 9, rng)
     best_fitness_overall = -float('inf')
     generations_without_improvement = 0
-    moviments = all_valid_moviments()
     game_interface = initialize_game()
+
     fitness_history: list[int] = []
-    individuals = create_initial_population(MOVEMENT_LIMIT, moviments)
-    for generation in range(MAX_GENERATIONS):
-        print(f"\n{'='*20} GERAÇÃO {generation} {'='*20}")
+    
+    print(f"Avaliando {POPULATION_SIZE} indivíduos da população Zero...")
+    start_time_eval = time.time()
+    individuals = create_initial_population(game_interface, simple_nn, moviments)
+    eval_time = time.time() - start_time_eval
+    print(f"Avaliação concluída em {eval_time:.2f}s.")
 
-        print(f"Avaliando {len(individuals)} indivíduos...")
-        start_time_eval = time.time()
-        population = calculate_fitness(game_interface, individuals)
+    sorted_population = sorted(individuals, key=lambda x: x.fitness, reverse=True)
+    current_best_fitness = sorted_population[0].fitness
+    fitness_history.append(current_best_fitness)
+    print(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
 
-        eval_time = time.time() - start_time_eval
-        print(f"Avaliação concluída em {eval_time:.2f}s.")
-
-        sorted_population = sorted(population, key=lambda x: x.fitness, reverse=True)
-
-        current_best_fitness = sorted_population[0].fitness
-        fitness_history.append(current_best_fitness)
-        print(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
-
+    population = 1
+    while True:
         if current_best_fitness > best_fitness_overall + IMPROVEMENT_THRESHOLD:
             best_fitness_overall = current_best_fitness
             generations_without_improvement = 0
             print(f"✨ Nova melhoria significativa encontrada! Melhor fitness geral: {best_fitness_overall:.2f}")
-            # Salvar o melhor indivíduo pode ser uma boa ideia aqui
-            # np.save('best_genome.npy', sorted_population[0].genome.)
         else:
             generations_without_improvement += 1
             print(f"Sem melhoria significativa. Gerações estagnadas: {generations_without_improvement}/{STAGNATION_LIMIT}")
@@ -117,10 +160,16 @@ if __name__ == "__main__":
         if generations_without_improvement >= STAGNATION_LIMIT:
             print(f"CRITÉRIO DE PARADA ATINGIDO: Ausência de melhoria por {STAGNATION_LIMIT} gerações.")
             break
-
-        print("Gerando a próxima população...")
-        
-        individuals = genetic.generate_new_population(sorted_population, moviments, generations_without_improvement > CONVERGENCE)
+        individuals = genetic.generate_new_population(sorted_population)
+        print(f"Avaliando {POPULATION_SIZE} indivíduos da população {population}...")
+        start_time_eval = time.time()
+        individuals = evaluate_mutated_individuals(game_interface, individuals)
+        eval_time = time.time() - start_time_eval
+        population += 1
+        sorted_population = sorted(individuals, key=lambda x: x.fitness, reverse=True)
+        current_best_fitness = sorted_population[0].fitness
+        fitness_history.append(current_best_fitness)
+        print(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
 
     print("\n" + "="*50)
     print("Evolução finalizada.")
