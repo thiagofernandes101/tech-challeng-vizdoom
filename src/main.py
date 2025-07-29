@@ -28,11 +28,11 @@ training_logger = setup_logger('training_logger', 'training_log.txt')
 # ==============================================================================
 # 1. PARÂMETROS GLOBAIS (FILOSOFIA "CONSCIÊNCIA ESTRATÉGICA")
 # ==============================================================================
-POPULATION_SIZE = 200
+POPULATION_SIZE = 250
 SCENARIO_PATH = "deadly_corridor.cfg"
 FRAME_SKIP = 4
 NN_INPUT_SIZE = 11
-NN_HIDDEN_SIZE = 20 # ALTERADO: Maior capacidade para processar estratégias complexas
+NN_HIDDEN_SIZE = 25 # ALTERADO: Maior capacidade para processar estratégias complexas
 
 ENEMY_NAMES = {'Zombieman', 'ShotgunGuy'}
 ENEMY_THREAT_LEVELS = { 'Zombieman': 1.0, 'ShotgunGuy': 3.0 }
@@ -215,10 +215,17 @@ def evaluate_individual(genome, game, actions, b_map, nn_config):
             angle_to_objective = angle_diff / 180.0
         
         nn_input = [
-            current_health / 100.0, current_ammo / MAX_AMMO, 1.0 if is_combat_mode else 0.0,
-            dist_to_objective / 1000.0, angle_to_objective,
-            float(cleared_zones[0]), float(cleared_zones[1]), float(cleared_zones[2]),
-            is_being_aimed_at, len(active_threats_in_zone) / 2.0, is_low_health
+            current_health / 100.0, 
+            current_ammo / MAX_AMMO, 
+            1.0 if is_combat_mode else 0.0,
+            dist_to_objective / 1000.0, 
+            angle_to_objective,
+            float(cleared_zones[0]), 
+            float(cleared_zones[1]), 
+            float(cleared_zones[2]),
+            is_being_aimed_at, 
+            len(active_threats_in_zone) / 2.0, 
+            is_low_health
         ]
         action_scores = agent_nn.forward(nn_input)
         action_index = np.argmax(action_scores)

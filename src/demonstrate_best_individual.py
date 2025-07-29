@@ -32,12 +32,13 @@ demo_logger = setup_logger('demo_logger', 'demonstration_log.txt')
 SCENARIO_PATH = "deadly_corridor.cfg"
 FRAME_SKIP = 4
 NN_INPUT_SIZE = 11
-NN_HIDDEN_SIZE = 20
+NN_HIDDEN_SIZE = 25
 
 ENEMY_NAMES = {'Zombieman', 'ShotgunGuy'}
 ENEMY_THREAT_LEVELS = { 'Zombieman': 1.0, 'ShotgunGuy': 3.0 }
 ARMOR_POSITION = np.array([1312.0, 0.0])
 ZONE_BOUNDS = [ (0, 450), (451, 900), (901, 1400) ]
+MAX_AMMO = 52
 LOW_HEALTH_THRESHOLD = 40.0
 
 # ==============================================================================
@@ -82,9 +83,10 @@ def initialize_game_for_visualization():
     game.load_config(SCENARIO_PATH)
     game.set_window_visible(True)
     game.set_mode(vzd.Mode.PLAYER)
+    game.set_screen_format(vzd.ScreenFormat.GRAY8)
     game.set_depth_buffer_enabled(True) 
     game.set_labels_buffer_enabled(True)
-    game.set_doom_skill(3)
+    game.set_doom_skill(1)
     game.init()
     return game
 
@@ -128,6 +130,7 @@ def run_visualization(game, agent_nn, actions):
         if state is None: continue
         
         current_health = game.get_game_variable(vzd.GameVariable.HEALTH)
+        current_ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
         player_pos = np.array([game.get_game_variable(vzd.GameVariable.POSITION_X), game.get_game_variable(vzd.GameVariable.POSITION_Y)])
         all_enemies, enemies_by_zone, enemies_aiming_count = get_entities_and_zones(state, player_pos)
         is_being_aimed_at = 1.0 if enemies_aiming_count > 0 else 0.0
@@ -136,15 +139,13 @@ def run_visualization(game, agent_nn, actions):
         is_combat_mode = len(all_enemies) > 0
         is_low_health = 1.0 if current_health < LOW_HEALTH_THRESHOLD else 0.0
         
-        if player_zone != -1 and not cleared_zones[player_zone] and not enemies_by_zone[player_zone]:
-             cleared_zones[player_zone] = True
-
+        # A decisão do objetivo tático agora ocorre ANTES de qualquer atualização de 'cleared_zones' neste ciclo.
         tactical_objective = ARMOR_POSITION
         active_threats_in_zone = []
         if player_zone != -1:
             active_threats_in_zone = enemies_by_zone[player_zone]
 
-        if is_low_health and player_zone > 0:
+        if is_low_health and player_zone > 0 and active_threats_in_zone:
             prev_zone_x_min, prev_zone_x_max = ZONE_BOUNDS[player_zone - 1]
             tactical_objective = np.array([(prev_zone_x_min + prev_zone_x_max) / 2, 0.0])
         elif player_zone != -1 and not cleared_zones[player_zone] and active_threats_in_zone:
@@ -175,16 +176,16 @@ def run_visualization(game, agent_nn, actions):
             angle_to_objective = angle_diff / 180.0
         
         nn_input = [
-            current_health / 100.0,
-            game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO) / 52.0,
+            current_health / 100.0, 
+            current_ammo / MAX_AMMO, 
             1.0 if is_combat_mode else 0.0,
-            dist_to_objective / 1000.0,
+            dist_to_objective / 1000.0, 
             angle_to_objective,
-            float(cleared_zones[0]),
-            float(cleared_zones[1]),
+            float(cleared_zones[0]), 
+            float(cleared_zones[1]), 
             float(cleared_zones[2]),
-            is_being_aimed_at,
-            len(active_threats_in_zone) / 2.0,
+            is_being_aimed_at, 
+            len(active_threats_in_zone) / 2.0, 
             is_low_health
         ]
 
@@ -193,6 +194,11 @@ def run_visualization(game, agent_nn, actions):
         
         action = actions[action_index]
         game.make_action(action, FRAME_SKIP)
+        
+        # A atualização de 'cleared_zones' agora ocorre DEPOIS da ação, espelhando o treino.
+        if player_zone != -1 and not cleared_zones[player_zone] and not enemies_by_zone[player_zone]:
+             cleared_zones[player_zone] = True
+        
         time.sleep(0.028)
 
     demo_logger.info(f"Episódio finalizado. Zonas Limpas: {cleared_zones}")
@@ -228,10 +234,12 @@ if __name__ == "__main__":
         exit()
     
     try:
-        while True:
+        v_counter = 1
+        while v_counter <= 100:
             run_visualization(game, agent_network, possible_actions)
             demo_logger.info("\nReiniciando em 3 segundos...")
             time.sleep(3)
+            v_counter += 1
     except Exception as e:
         demo_logger.error(f"Ocorreu um erro durante a visualização: {e}")
     finally:
