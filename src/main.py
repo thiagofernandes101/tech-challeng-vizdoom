@@ -1,5 +1,4 @@
 from itertools import product
-import random
 import time
 from typing import List
 from models.game_interface import GameInfo, GameInterface
@@ -7,6 +6,7 @@ from models.individual import Individual
 from models.movement import Movement
 from models.genome import Genome
 import numpy as np
+from models.game_element import GameElement
 from utils.mapper import Mapper
 from utils.simple_nn import SimpleNN
 from utils.genetic import Genetic
@@ -65,7 +65,7 @@ def all_valid_moviments() -> list[Movement]:
     print(f"Cardápio de ações definido com {len(movimentos_validos)} movimentos possíveis.")
     return movimentos_validos
 
-def create_initial_population(game_interface: GameInterface, simple_nn: SimpleNN, valids_moves: list[Movement]):
+def generate_info_vector(game_interface: GameInterface, player: GameElement, elements: List[GameElement])-> np.ndarray:
     ELEMENT_TYPE_MAP = {
         'Enemy': 1,
         'Player': 2,
@@ -73,37 +73,39 @@ def create_initial_population(game_interface: GameInterface, simple_nn: SimpleNN
         'Blood': 4,
         'Targer': 5,
     }
+    episode_info_vector: list[float] = []
+    episode_info_vector.append(game_interface.get_state_info(GameInfo.HEALTH) / 100)
+    episode_info_vector.append(game_interface.get_state_info(GameInfo.ITEMS_COUNT) / 10)
+    episode_info_vector.append(game_interface.get_state_info(GameInfo.DAMAGE_COUNT) / 100)
+    episode_info_vector.append(game_interface.get_state_info(GameInfo.KILL_COUNT) / 10)
+    episode_info_vector.append(game_interface.get_state_info(GameInfo.DAMAGE_TAKEN) / 100)
+    episode_info_vector.append(game_interface.get_state_info(GameInfo.WEAPON_AMMO) / 100)
+
+    episode_info_vector.append(game_interface.get_current_x() / 1000)
+    episode_info_vector.append(game_interface.get_current_y() / 1000)
+    episode_info_vector.append(player.angle / 1000)
+
+    for element in elements:
+        episode_info_vector.append(element.pos_x / 1000)
+        episode_info_vector.append(element.pos_y / 1000)
+        episode_info_vector.append(element.angle / 1000)
+        element_class_name = type(element).__name__
+        type_value = ELEMENT_TYPE_MAP.get(element_class_name, 0)
+        episode_info_vector.append(type_value / 10)
+
+    if len(episode_info_vector) < NEURAL_INPUTS:
+        episode_info_vector += [0.0] * (NEURAL_INPUTS - len(episode_info_vector))
+
+    return np.array(episode_info_vector).reshape(-1, 1)
+
+def create_initial_population(game_interface: GameInterface, simple_nn: SimpleNN, valids_moves: list[Movement]):
     population: list[Individual] = []
     for _ in range(POPULATION_SIZE):
         game_interface.start_episode()
         individual = Individual()
         while not game_interface.episode_is_finished():
-            episode_info_vector: list[float] = []
-            episode_info_vector.append(game_interface.get_state_info(GameInfo.HEALTH) / 100)
-            episode_info_vector.append(game_interface.get_state_info(GameInfo.ITEMS_COUNT) / 10)
-            episode_info_vector.append(game_interface.get_state_info(GameInfo.DAMAGE_COUNT) / 100)
-            episode_info_vector.append(game_interface.get_state_info(GameInfo.KILL_COUNT) / 10)
-            episode_info_vector.append(game_interface.get_state_info(GameInfo.DAMAGE_TAKEN) / 100)
-            episode_info_vector.append(game_interface.get_state_info(GameInfo.WEAPON_AMMO) / 100)
-
             elements, player = game_interface.get_visible_elements()
-
-            episode_info_vector.append(game_interface.get_current_x() / 1000)
-            episode_info_vector.append(game_interface.get_current_y() / 1000)
-            episode_info_vector.append(player.angle / 1000)
-
-            for element in elements:
-                episode_info_vector.append(element.pos_x / 1000)
-                episode_info_vector.append(element.pos_y / 1000)
-                episode_info_vector.append(element.angle / 1000)
-                element_class_name = type(element).__name__
-                type_value = ELEMENT_TYPE_MAP.get(element_class_name, 0)
-                episode_info_vector.append(type_value / 10)
-
-            if len(episode_info_vector) < NEURAL_INPUTS:
-                episode_info_vector += [0.0] * (NEURAL_INPUTS - len(episode_info_vector))
-
-            input_vector = np.array(episode_info_vector).reshape(-1, 1)
+            input_vector = generate_info_vector(game_interface, player, elements)
             output = simple_nn.forward(input_vector)
             genome = Mapper.neural_output_to_moviment(output, valids_moves)
             genome.neural_output = output

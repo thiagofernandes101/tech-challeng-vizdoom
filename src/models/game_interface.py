@@ -31,6 +31,7 @@ class GameInterface():
         self.__game.init()
         self.__target_x = 1312.00
         self.__target_y = 0.0
+        self.__wrong_shot = 0
 
     def get_avaliable_buttons_amount(self) -> int:
         return self.__game.get_available_buttons_size()
@@ -46,17 +47,14 @@ class GameInterface():
         return self.__game.is_episode_finished()
     
     def get_fitness(self)-> float:
-        print(f'maior espaço percorrido {self.__distance - self.__current_distance}')
-        if self.get_state_info(GameInfo.KILL_COUNT) > 4:
-            print(f'kills: {self.get_state_info(GameInfo.KILL_COUNT)}')
         return (
-            (0.5 * self.get_state_info(GameInfo.KILL_COUNT)) +
+            (0.7 * self.get_state_info(GameInfo.KILL_COUNT)) +
             (1.0 * self.get_state_info(GameInfo.HEALTH)) +
-            (0.5 * self.get_state_info(GameInfo.WEAPON_AMMO)) +
+            (0.4 * self.get_state_info(GameInfo.WEAPON_AMMO)) +
             (0.5 * self.get_state_info(GameInfo.ITEMS_COUNT)) +
             (0.5 * self.get_state_info(GameInfo.DAMAGE_COUNT)) +
-            (0.5 * self.get_state_info(GameInfo.DAMAGE_TAKEN)) +
-            (1.0 * self.__wrong_shot) +
+            (-0.5 * self.get_state_info(GameInfo.DAMAGE_TAKEN)) +
+            (-0.6 * self.__wrong_shot) +
             (2.0 * (self.__distance - self.__current_distance))
         )
 
@@ -108,20 +106,20 @@ class GameInterface():
         if len(commands) > self.get_avaliable_buttons_amount():
             raise ValueError(f'actions list must have {len(self.get_avaliable_buttons_amount())} but you sent {len(commands)}')
         
-        before_kill_count = self.get_state_info(GameInfo.KILL_COUNT)
+        before_damage_count = self.get_state_info(GameInfo.DAMAGE_COUNT)
 
         step_evaluation = StepEvaluation(commands, 
-                                            before_kill_count, 
+                                            self.get_state_info(GameInfo.KILL_COUNT), 
                                             self.get_state_info(GameInfo.HEALTH),
                                             self.get_state_info(GameInfo.ITEMS_COUNT),
-                                            self.get_state_info(GameInfo.DAMAGE_COUNT)
+                                            before_damage_count
                                         )
         self.__game.make_action(commands)
         step_evaluation.kills_after = self.get_state_info(GameInfo.KILL_COUNT)
         step_evaluation.health_after = self.get_state_info(GameInfo.HEALTH)
         step_evaluation.items_after = self.get_state_info(GameInfo.ITEMS_COUNT)
         step_evaluation.damega_count_after = self.get_state_info(GameInfo.DAMAGE_COUNT)
-        if movement.attack and before_kill_count == self.get_state_info(GameInfo.KILL_COUNT):
+        if movement.attack and before_damage_count == self.get_state_info(GameInfo.DAMAGE_COUNT):
             self.__wrong_shot +=1
 
         if self.__game.get_state():
