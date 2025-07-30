@@ -47,6 +47,12 @@ class GameInterface():
         return self.__game.is_episode_finished()
     
     def get_fitness(self)-> float:
+        if self.get_state_info(GameInfo.KILL_COUNT) >= 2 :
+            print(f'kills: {self.get_state_info(GameInfo.KILL_COUNT)}')
+        if self.__distance - self.__current_distance > 700:
+            print(f'distancia percorrida: {self.__distance - self.__current_distance}')
+        print(f'vida: {self.get_state_info(GameInfo.HEALTH)}')
+        print(f'tiros errados: {self.__wrong_shot}')
         return (
             (0.7 * self.get_state_info(GameInfo.KILL_COUNT)) +
             (1.0 * self.get_state_info(GameInfo.HEALTH)) +

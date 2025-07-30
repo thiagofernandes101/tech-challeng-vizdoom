@@ -74,6 +74,7 @@ class Genetic():
             new_genome = genome
             if mutate_now or random.random() < self.__mutate_rate:
                 try:
+                    mutate_now = False
                     new_output = genome.neural_output + self.__rng.normal(0, 0.2, size=genome.neural_output.shape)
                     new_genome = Mapper.neural_output_to_moviment(np.clip(new_output, 0.0, 1.0), self.__valid_moves)
                 except Exception:
