@@ -208,3 +208,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+training_log.txt
+vizdoom-crash.log
+logs/
+genomes/
+_vizdoom.ini
+vizdoom-crash.log
