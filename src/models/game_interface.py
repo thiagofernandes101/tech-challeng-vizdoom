@@ -2,8 +2,8 @@ from enum import Enum
 import vizdoom as vzd
 
 from models.movement import Movement
-from models.step_evaluation import StepEvaluation
 from models.game_element import ElementFactory, FakeLabel, GameElement, Player
+from models.individual_info import IndividualInfo
 from utils.calc import Calc
 
 class GameInfo(Enum):
@@ -44,8 +44,19 @@ class GameInterface():
             self.__game.advance_action()
 
     def episode_is_finished(self) -> bool:
-        return self.__game.is_episode_finished()
+        finished = self.__game.is_episode_finished()
+        if finished:
+            self.__individual_info = IndividualInfo(
+                self.__distance - self.__current_distance, 
+                self.get_state_info(GameInfo.HEALTH), 
+                self.get_state_info(GameInfo.KILL_COUNT),
+                self.get_fitness()
+            )
+        return finished
     
+    def individual_info(self):
+        return self.__individual_info
+
     def get_fitness(self)-> float:
         if self.get_state_info(GameInfo.KILL_COUNT) >= 2 :
             print(f'kills: {self.get_state_info(GameInfo.KILL_COUNT)}')
@@ -54,14 +65,14 @@ class GameInterface():
         print(f'vida: {self.get_state_info(GameInfo.HEALTH)}')
         print(f'tiros errados: {self.__wrong_shot}')
         return (
-            (0.7 * self.get_state_info(GameInfo.KILL_COUNT)) +
+            (6.0 * self.get_state_info(GameInfo.KILL_COUNT)) +
             (1.0 * self.get_state_info(GameInfo.HEALTH)) +
             (0.4 * self.get_state_info(GameInfo.WEAPON_AMMO)) +
             (0.5 * self.get_state_info(GameInfo.ITEMS_COUNT)) +
-            (0.5 * self.get_state_info(GameInfo.DAMAGE_COUNT)) +
+            (1.0 * self.get_state_info(GameInfo.DAMAGE_COUNT)) +
             (-0.5 * self.get_state_info(GameInfo.DAMAGE_TAKEN)) +
-            (-0.6 * self.__wrong_shot) +
-            (2.0 * (self.__distance - self.__current_distance))
+            (-0.2 * self.__wrong_shot) +
+            (0.09 * (self.__distance - self.__current_distance))
         )
 
     def get_state_info(self, info: GameInfo)-> float:
@@ -107,39 +118,19 @@ class GameInterface():
             player = Player(label)
         return sorted(elements, key=lambda e: Calc.get_distance_between_elements(player, e)), player
 
-    def make_action(self, movement: Movement) -> StepEvaluation:
+    def make_action(self, movement: Movement) -> None:
         commands = movement.to_list_command()
         if len(commands) > self.get_avaliable_buttons_amount():
             raise ValueError(f'actions list must have {len(self.get_avaliable_buttons_amount())} but you sent {len(commands)}')
         
         before_damage_count = self.get_state_info(GameInfo.DAMAGE_COUNT)
 
-        step_evaluation = StepEvaluation(commands, 
-                                            self.get_state_info(GameInfo.KILL_COUNT), 
-                                            self.get_state_info(GameInfo.HEALTH),
-                                            self.get_state_info(GameInfo.ITEMS_COUNT),
-                                            before_damage_count
-                                        )
         self.__game.make_action(commands)
-        step_evaluation.kills_after = self.get_state_info(GameInfo.KILL_COUNT)
-        step_evaluation.health_after = self.get_state_info(GameInfo.HEALTH)
-        step_evaluation.items_after = self.get_state_info(GameInfo.ITEMS_COUNT)
-        step_evaluation.damega_count_after = self.get_state_info(GameInfo.DAMAGE_COUNT)
         if movement.attack and before_damage_count == self.get_state_info(GameInfo.DAMAGE_COUNT):
             self.__wrong_shot +=1
 
         if self.__game.get_state():
-            self.__current_distance = Calc.distance(self.__game.get_state().game_variables[0], self.__game.get_state().game_variables[1], self.__target_x, self.__target_y)
-            if self.__current_distance < self.__distance:
-                step_evaluation.progress_statu(1)
-            elif self.__current_distance > self.__distance:
-                step_evaluation.progress_statu(-1)
-            else:
-                step_evaluation.progress_statu(0)   
-        else:
-            step_evaluation.progress_statu(0)   
-
-        return step_evaluation
+            self.__current_distance = Calc.distance(self.__game.get_state().game_variables[0], self.__game.get_state().game_variables[1], self.__target_x, self.__target_y)  
 
     def close(self) -> None:
         self.__game.close()

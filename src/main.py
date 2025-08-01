@@ -1,4 +1,7 @@
+from dataclasses import asdict
 from itertools import product
+import json
+from pathlib import Path
 import time
 from typing import List
 from models.game_interface import GameInfo, GameInterface
@@ -7,6 +10,7 @@ from models.movement import Movement
 from models.genome import Genome
 import numpy as np
 from models.game_element import GameElement
+from models.individual_info import IndividualInfo
 from utils.mapper import Mapper
 from utils.simple_nn import SimpleNN
 from utils.genetic import Genetic
@@ -26,10 +30,8 @@ DAMAGE_TAKEN = -0.5
 MISSING_SHOT = -0.8
 GAME_PROGRESS = 0.4
 
-
-MAX_GENERATIONS = 999999    # O número máximo de gerações que o algoritmo irá executar
-STAGNATION_LIMIT = 10000    # N: O número de gerações sem melhoria antes de parar
-IMPROVEMENT_THRESHOLD = 0.1 # A melhoria mínima no fitness para ser considerada "significativa"
+STAGNATION_LIMIT = 1
+IMPROVEMENT_THRESHOLD = 0.1
 
 CONVERGENCE = 10
 
@@ -98,8 +100,9 @@ def generate_info_vector(game_interface: GameInterface, player: GameElement, ele
 
     return np.array(episode_info_vector).reshape(-1, 1)
 
-def create_initial_population(game_interface: GameInterface, simple_nn: SimpleNN, valids_moves: list[Movement]):
+def create_initial_population(game_interface: GameInterface, simple_nn: SimpleNN, valids_moves: list[Movement]) -> tuple[list[Individual], list[IndividualInfo]]:
     population: list[Individual] = []
+    population_info: list[IndividualInfo] = []
     for _ in range(POPULATION_SIZE):
         game_interface.start_episode()
         individual = Individual()
@@ -111,20 +114,25 @@ def create_initial_population(game_interface: GameInterface, simple_nn: SimpleNN
             genome.neural_output = output
             individual.inc_genome(genome)
             game_interface.make_action(genome.movement)
+        individual_info = game_interface.individual_info()
+        population_info.append(individual_info)
         individual.fitness = game_interface.get_fitness()
         population.append(individual)
 
-    return population
+    return population, population_info
 
-def evaluate_mutated_individuals(game_interface: GameInterface, new_generation: list[Individual])-> list[Individual]:
+def evaluate_mutated_individuals(game_interface: GameInterface, new_generation: list[Individual]) -> tuple[list[Individual], list[IndividualInfo]]:
+    population_info: list[IndividualInfo] = []
     for individual in new_generation:
         game_interface.start_episode()
         for genome in individual.genomes:
             if game_interface.episode_is_finished():
+                individual_info = game_interface.individual_info()
+                population_info.append(individual_info)
                 break
             game_interface.make_action(genome.movement)
         individual.fitness = game_interface.get_fitness()
-    return new_generation
+    return new_generation, population_info
 
 if __name__ == "__main__":
 
@@ -140,7 +148,9 @@ if __name__ == "__main__":
     
     print(f"Avaliando {POPULATION_SIZE} indivíduos da população Zero...")
     start_time_eval = time.time()
-    individuals = create_initial_population(game_interface, simple_nn, moviments)
+    populations_info: dict[int, IndividualInfo] = {}
+    individuals, population_info = create_initial_population(game_interface, simple_nn, moviments)
+    populations_info[0] = population_info
     eval_time = time.time() - start_time_eval
     print(f"Avaliação concluída em {eval_time:.2f}s.")
 
@@ -165,7 +175,8 @@ if __name__ == "__main__":
         individuals = genetic.generate_new_population(sorted_population)
         print(f"Avaliando {POPULATION_SIZE} indivíduos da população {population}...")
         start_time_eval = time.time()
-        individuals = evaluate_mutated_individuals(game_interface, individuals)
+        individuals, population_info = evaluate_mutated_individuals(game_interface, individuals)
+        populations_info[population] = population_info
         eval_time = time.time() - start_time_eval
         population += 1
         sorted_population = sorted(individuals, key=lambda x: x.fitness, reverse=True)
@@ -173,12 +184,15 @@ if __name__ == "__main__":
         fitness_history.append(current_best_fitness)
         print(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
 
+    print('salvando resultados...')
+    for key, value in populations_info.items():
+        dict_info = [asdict(r) for r in value]
+        doc_dir = Path(__file__).resolve().parent.parent / 'docs'
+        doc_dir.mkdir(exist_ok=True)
+        with open(doc_dir / f'results_gen_{key}.json', 'w', encoding='utf-8') as f:
+            json.dump(dict_info, f, ensure_ascii=False, indent=4)
     print("\n" + "="*50)
     print("Evolução finalizada.")
-    
-    final_best_individual = sorted(individuals, key=lambda x: x.fitness, reverse=True)[0]
-    print(f"Melhor fitness final alcançado: {final_best_individual['fitness']:.2f}")
-    print(f"Executado por {len(fitness_history)} gerações.")
 
     game_interface.close()
     print("Instância do jogo finalizada. Processo concluído.")
