@@ -1,0 +1,17 @@
+cloudpickle==3.1.1
+contourpy==1.3.2
+cycler==0.12.1
+Farama-Notifications==0.0.4
+fonttools==4.58.5
+gymnasium==1.2.0
+kiwisolver==1.4.8
+matplotlib==3.10.3
+numpy==2.3.1
+packaging==25.0
+pillow==11.3.0
+pygame==2.6.1
+pyparsing==3.2.3
+python-dateutil==2.9.0.post0
+six==1.17.0
+typing_extensions==4.14.1
+vizdoom @ git+https://github.com/Farama-Foundation/ViZDoom@75c740a2d12f1d439473ab9af9d6861207017f8f
