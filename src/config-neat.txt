@@ -5,14 +5,14 @@
 [NEAT]
 fitness_criterion     = max
 fitness_threshold     = 1000
-pop_size              = 50
+pop_size              = 1000
 reset_on_extinction   = False
 
 [DefaultGenome]
 # -- Arquitetura e Atributos Principais --
 num_inputs              = 7
 num_hidden              = 0
-num_outputs             = 3
+num_outputs             = 4
 feed_forward            = True
 initial_connection      = full
 
@@ -73,8 +73,8 @@ compatibility_threshold = 3.0
 
 [DefaultStagnation]
 species_fitness_func = max
-max_stagnation       = 100
+max_stagnation       = 800
 
 [DefaultReproduction]
-elitism             = 3
+elitism             = 50
 survival_threshold  = 0.2

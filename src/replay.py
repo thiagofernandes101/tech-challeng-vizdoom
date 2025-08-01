@@ -53,11 +53,12 @@ def replay_genome(config_path: str, genome_path: str):
             state_vector = processor.process(raw_state, player_pos, player_angle, player_health, player_ammo, is_shooting)
             output = net.activate(state_vector)
 
-            turn_left = output[0] < -0.5
-            turn_right = output[0] > 0.5
-            move_forward = output[1] > 0.5
-            attack = output[2] > 0.5
+            turn_left = output[0] < -0.3
+            turn_right = output[0] > 0.3
+            move_forward = output[1] > 0.3
+            attack = output[2] > 0.7
             action = [turn_left, turn_right, attack, move_forward, False, False, False]
+            is_shooting = attack
 
             game.make_action(action)
 
@@ -80,9 +81,10 @@ def replay_genome(config_path: str, genome_path: str):
                 custom_reward -= 1.0
 
             total_reward += game.get_last_reward()
+            print(f"Kills: {game.get_game_variable(vzd.GameVariable.KILLCOUNT)}")
             time.sleep(1.0 / 35.0) # Aproximadamente 35 FPS
         
-        print(f"Episódio {i + 1} finalizado. Recompensa total: {total_reward:.2f}")
+        print(f"Episódio {i + 1} finalizado. Recompensa total: {total_reward:.2f}.")
         time.sleep(2) # Pausa entre os episódios
 
     game.close()

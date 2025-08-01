@@ -52,12 +52,11 @@ class SaveBestGenomeReporter(neat.reporting.BaseReporter):
                 state_vector = self.processor.process(raw_state, player_pos, player_angle, player_health, player_ammo, is_shooting)
                 output = net.activate(state_vector)
 
-                turn_left = output[0] < -0.5
-                turn_right = output[0] > 0.5
-                move_forward = output[1] > 0.5
-                attack = output[2] > 0.5
+                turn_left = output[0] < -0.3
+                turn_right = output[0] > 0.3
+                move_forward = output[1] > 0.3
+                attack = output[2] > 0.7
                 action = [turn_left, turn_right, attack, move_forward, False, False, False]
-                
                 is_shooting = attack
                 
                 recorder_game.make_action(action)

@@ -10,7 +10,7 @@ from state_processor import StateProcessor
 
 # --- 1. Initialization ---
 SCENARIO_FILE = "deadly_corridor.cfg"
-game = Game.initialize_doom(SCENARIO_FILE, render_window=False)
+game = Game.initialize_doom(SCENARIO_FILE, render_window=True)
 
 # Define as ações possíveis
 n = game.get_available_buttons_size()
@@ -24,68 +24,80 @@ processor = StateProcessor(
 # --- 2. A Função de Avaliação (O Coração da Integração com NEAT) ---
 
 def eval_genomes(genomes, config):
-    """
-    Roda uma simulação para cada genoma na população para avaliar sua aptidão.
-    A aptidão (fitness) é a recompensa total acumulada no episódio.
-    """
+    button_map = {button.name: i for i, button in enumerate(game.get_available_buttons())}
+    action_template = [False] * game.get_available_buttons_size()
+
     for genome_id, genome in genomes:
-        # Cria a rede neural a partir do genoma
         net = neat.nn.FeedForwardNetwork.create(genome, config)
-        
-        # Inicia um novo episódio para este genoma
         game.new_episode()
-        genome.fitness = 0  # Inicia a aptidão como zero
-        is_shooting = False 
+        genome.fitness = 0
+
+        is_shooting = False
 
         while not game.is_episode_finished():
             raw_state = game.get_state()
-            # Supondo que as primeiras 2 game_variables são a posição X e Y
+            if raw_state is None: break
+
+            # Coleta de todas as variáveis de estado necessárias
             player_pos = np.array([game.get_game_variable(vzd.GameVariable.POSITION_X), game.get_game_variable(vzd.GameVariable.POSITION_Y)])
-            player_health = game.get_game_variable(vzd.GameVariable.HEALTH)
             player_angle = game.get_game_variable(vzd.GameVariable.ANGLE)
-            player_ammo = game.get_game_variable(vzd.GameVariable.SELECTED_WEAPON_AMMO)
+            player_health = game.get_game_variable(vzd.GameVariable.HEALTH)
+            ammo_count = game.get_game_variable(vzd.GameVariable.AMMO2)
 
-            # Processa o estado para criar o vetor de entrada
-            state_vector = processor.process(raw_state, player_pos, player_angle, player_health, player_ammo, is_shooting)
-
-            # Alimenta a rede com o estado para obter as saídas
+            state_vector = processor.process(raw_state, player_pos, player_angle, player_health, ammo_count, is_shooting)
+            
             output = net.activate(state_vector)
+            
+            action = list(action_template)
+            do_turn_left = output[0] > 0.5
+            do_turn_right = output[1] > 0.5
+            do_move_forward = output[2] > 0.5
+            do_attack = output[3] > 0.7
+            
+            action[button_map['TURN_LEFT']] = do_turn_left
+            action[button_map['TURN_RIGHT']] = do_turn_right
+            action[button_map['MOVE_FORWARD']] = do_move_forward
+            action[button_map['ATTACK']] = do_attack
 
-            # --- Traduz a saída da rede em ações do jogo ---
-            # output[0]: Controle de virada (-1.0 a 1.0)
-            # output[1]: Controle de movimento (-1.0 a 1.0)
-            # output[2]: Controle de tiro (> 0.5 para atirar)
-            
-            turn_left = output[0] < -0.5
-            turn_right = output[0] > 0.5
-            move_forward = output[1] > 0.5
-            attack = output[2] > 0.5
-            
-            # Os outros botões (como move_backward, strafe) são mantidos como 0
-            action = [turn_left, turn_right, attack, move_forward, False, False, False]
-            is_shooting = attack
-            
+            # action = [turn_left, turn_right, attack, move_forward, False, False, False]
+            is_shooting = do_attack
+
             reward = game.make_action(action)
-
-            # --- LÓGICA DE RECOMPENSA CUSTOMIZADA ---
+            
+            # --- LÓGICA DE RECOMPENSA CUSTOMIZADA ATUALIZADA ---
             custom_reward = 0.0
             
-            # Extrai informações relevantes do vetor de estado
             enemy_is_present = state_vector[3]
-            enemy_distance_normalized = state_vector[4] # Distância já normalizada
+            enemy_distance_normalized = state_vector[4]
             crosshair_on_enemy = state_vector[6]
 
-            # 1. Penalidade por inação em combate
-            # Se um inimigo está visível e perto, penalize a passividade
+            # 1. Penalidade por Inação (AUMENTADA)
+            # Aumentamos a penalidade para tornar a passividade mais custosa.
             if enemy_is_present > 0 and enemy_distance_normalized > 0.4 and not is_shooting:
-                custom_reward -= 0.5 
+                custom_reward -= 1.0  # Era -0.5, agora é -1.0
 
-            # 2. Penalidade por desperdício de munição
-            # Se atirou, mas não na direção do inimigo
+            # 2. Penalidade por Desperdício de Munição (MANTIDA)
             if is_shooting and not crosshair_on_enemy:
                 custom_reward -= 1.0
 
-            genome.fitness += reward
+            # 3. BÔNUS DE AGRESSÃO PRECISA (NOVO)
+            # Recompensa o agente por atirar ENQUANTO a mira está no inimigo.
+            # Isso cria um forte incentivo para mirar e manter o fogo.
+            if is_shooting and crosshair_on_enemy:
+                custom_reward += 2.0 # Um bônus significativo por cada tiro preciso.
+            
+            # Verifica se o episódio terminou
+            is_finished = game.is_episode_finished()
+            if is_finished:
+                # BÔNUS DE VITÓRIA COM COMBATE
+                total_kills = game.get_game_variable(vzd.GameVariable.KILLCOUNT)
+                player_health = game.get_game_variable(vzd.GameVariable.HEALTH)
+                
+                # Se o agente sobreviveu E matou alguém, dê um grande bônus
+                if player_health > 0 and total_kills > 0:
+                    genome.fitness += 200.0 # Bônus substancial por vencer lutando
+
+            genome.fitness += (reward + custom_reward)
 
         print(f"Genome ID: {genome_id} Fitness: {genome.fitness}")
 
@@ -106,7 +118,7 @@ def run(config_file):
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    p.add_reporter(neat.Checkpointer(1)) # Salva um checkpoint a cada 5 gerações
+    p.add_reporter(neat.Checkpointer(5)) # Salva um checkpoint a cada 5 gerações
 
     save_reporter = SaveBestGenomeReporter(SCENARIO_FILE, processor, 'src/genomes/gen')
     p.add_reporter(save_reporter)

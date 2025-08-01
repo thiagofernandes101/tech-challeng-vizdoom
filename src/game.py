@@ -16,7 +16,7 @@ class Game:
         game.set_screen_format(vzd.ScreenFormat.GRAY8)
         game.set_depth_buffer_enabled(True)
         game.set_labels_buffer_enabled(True)
-        game.set_doom_skill(4)
+        game.set_doom_skill(5)
 
         game.set_death_penalty(100)
         game.set_living_reward(-1)
