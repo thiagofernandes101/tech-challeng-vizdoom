@@ -5,7 +5,7 @@ import math
 import os
 import glob
 import logging
-from NeuralNetwork import NeuralNetwork
+from models.NeuralNetwork import NeuralNetwork
 
 # ==============================================================================
 # LOGGER
