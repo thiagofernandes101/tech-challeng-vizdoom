@@ -16,13 +16,13 @@ class Game:
         game.set_screen_format(vzd.ScreenFormat.GRAY8)
         game.set_depth_buffer_enabled(True)
         game.set_labels_buffer_enabled(True)
-        game.set_doom_skill(5)
+        game.set_doom_skill(4)
 
         game.set_death_penalty(100)
         game.set_living_reward(-1)
         game.set_kill_reward(50)
         game.set_hit_taken_penalty(10)
-        game.set_damage_made_reward(1)
+        game.set_damage_made_reward(5)
 
         game.init()
         return game
@@ -50,6 +50,7 @@ class Game:
             {'MOVE_LEFT'},   # Strafe Left
             # Combat Actions
             {'ATTACK'},
+            {'ATTACK', 'MOVE_FORWARD'},
             {'ATTACK', 'MOVE_BACKWARD'},
             {'ATTACK', 'MOVE_RIGHT'},
             {'ATTACK', 'MOVE_LEFT'},
@@ -69,20 +70,3 @@ class Game:
                 valid_actions.append(action_vector)
         
         return valid_actions
-    
-    def get_nearest_enemy(self, state, player_pos):
-        enemies = []
-        if not state or not state.labels:
-            return None
-
-        for label in state.labels:
-            if label.object_name in ["Zombieman", "Imp", "Demon"]:
-                enemy_pos = np.array([label.object_position_x, label.object_position_y])
-                distance = np.linalg.norm(player_pos - enemy_pos)
-                enemies.append({'pos': enemy_pos, 'name': label.object_name, 'dist': distance})
-
-        if not enemies:
-            return None
-
-        # Retorna o inimigo com a menor distância
-        return min(enemies, key=lambda e: e['dist'])
