@@ -1,0 +1,56 @@
+[
+    {
+        "distance": 931.837444751598,
+        "healt": -4.0,
+        "kill_amount": 1.0,
+        "fitness": 53.86537002764382
+    },
+    {
+        "distance": 764.6099336603543,
+        "healt": -10.0,
+        "kill_amount": 1.0,
+        "fitness": 29.414894029431885
+    },
+    {
+        "distance": 639.2658304245988,
+        "healt": -2.0,
+        "kill_amount": 0.0,
+        "fitness": 18.133924738213892
+    },
+    {
+        "distance": 882.358077935849,
+        "healt": -4.0,
+        "kill_amount": 1.0,
+        "fitness": 64.4122270142264
+    },
+    {
+        "distance": 889.0056245449202,
+        "healt": -10.0,
+        "kill_amount": 2.0,
+        "fitness": 66.41050620904282
+    },
+    {
+        "distance": 786.5230997395635,
+        "healt": 0.0,
+        "kill_amount": 1.0,
+        "fitness": 46.587078976560704
+    },
+    {
+        "distance": 997.4562898680356,
+        "healt": -10.0,
+        "kill_amount": 0.0,
+        "fitness": 44.171066088123204
+    },
+    {
+        "distance": 998.2459079827047,
+        "healt": -6.0,
+        "kill_amount": 1.0,
+        "fitness": 71.24213171844343
+    },
+    {
+        "distance": 776.5771873446026,
+        "healt": -2.0,
+        "kill_amount": 0.0,
+        "fitness": 36.091946861014236
+    }
+]

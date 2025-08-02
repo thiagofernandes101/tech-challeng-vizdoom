@@ -11,6 +11,7 @@ from models.genome import Genome
 import numpy as np
 from models.game_element import GameElement
 from models.individual_info import IndividualInfo
+from models.result_manager import ResultManager
 from utils.mapper import Mapper
 from utils.simple_nn import SimpleNN
 from utils.genetic import Genetic
@@ -30,7 +31,7 @@ DAMAGE_TAKEN = -0.5
 MISSING_SHOT = -0.8
 GAME_PROGRESS = 0.4
 
-STAGNATION_LIMIT = 1
+STAGNATION_LIMIT = 100
 IMPROVEMENT_THRESHOLD = 0.1
 
 CONVERGENCE = 10
@@ -45,7 +46,7 @@ HIDDEN_SIZE = 222
 def initialize_game() -> GameInterface:
     """Cria e configura a instância do jogo ViZDoom."""
     print("Inicializando ViZDoom...")
-    return GameInterface(SCENARIO_PATH, True)
+    return GameInterface(SCENARIO_PATH)
 
 def all_valid_moviments() -> list[Movement]:
     movimentos_validos = []
@@ -185,12 +186,18 @@ if __name__ == "__main__":
         print(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
 
     print('salvando resultados...')
+    doc_dir = Path(__file__).resolve().parent.parent / 'docs'
+    plot_dir = Path(__file__).resolve().parent.parent / 'plots'
     for key, value in populations_info.items():
         dict_info = [asdict(r) for r in value]
-        doc_dir = Path(__file__).resolve().parent.parent / 'docs'
         doc_dir.mkdir(exist_ok=True)
         with open(doc_dir / f'results_gen_{key}.json', 'w', encoding='utf-8') as f:
             json.dump(dict_info, f, ensure_ascii=False, indent=4)
+    print('gerando gráficos')
+    result_manager = ResultManager(doc_dir, plot_dir, 'results_gen_*.json')
+    result_manager.mean_fitness()
+    result_manager.distance_vs_kill()
+    result_manager.secondary_mean_evolutuion()
     print("\n" + "="*50)
     print("Evolução finalizada.")
 

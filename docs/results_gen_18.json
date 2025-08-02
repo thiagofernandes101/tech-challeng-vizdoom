@@ -1,0 +1,86 @@
+[
+    {
+        "distance": 966.1188415717952,
+        "healt": -4.0,
+        "kill_amount": 2.0,
+        "fitness": 76.95069574146156
+    },
+    {
+        "distance": 912.2868740842232,
+        "healt": -6.0,
+        "kill_amount": 1.0,
+        "fitness": 52.70581866758008
+    },
+    {
+        "distance": 823.1030236351917,
+        "healt": -12.0,
+        "kill_amount": 1.0,
+        "fitness": 36.07927212716724
+    },
+    {
+        "distance": 790.8568666167453,
+        "healt": -2.0,
+        "kill_amount": 2.0,
+        "fitness": 78.77711799550707
+    },
+    {
+        "distance": 939.7507036699933,
+        "healt": 0.0,
+        "kill_amount": 0.0,
+        "fitness": 52.977563330299404
+    },
+    {
+        "distance": 876.6094446981964,
+        "healt": -2.0,
+        "kill_amount": 0.0,
+        "fitness": 44.89485002283767
+    },
+    {
+        "distance": 915.8885160154543,
+        "healt": -10.0,
+        "kill_amount": 1.0,
+        "fitness": 61.429966441390896
+    },
+    {
+        "distance": 800.0890997738757,
+        "healt": 0.0,
+        "kill_amount": 0.0,
+        "fitness": 41.60801897964881
+    },
+    {
+        "distance": 746.5299357941112,
+        "healt": -2.0,
+        "kill_amount": 0.0,
+        "fitness": 34.18769422147002
+    },
+    {
+        "distance": 976.2268024213935,
+        "healt": 0.0,
+        "kill_amount": 0.0,
+        "fitness": 56.26041221792542
+    },
+    {
+        "distance": 990.8739664964253,
+        "healt": -4.0,
+        "kill_amount": 0.0,
+        "fitness": 51.77865698467827
+    },
+    {
+        "distance": 900.1821296788723,
+        "healt": -12.0,
+        "kill_amount": 1.0,
+        "fitness": 38.81639167109851
+    },
+    {
+        "distance": 994.0734661980539,
+        "healt": -2.0,
+        "kill_amount": 1.0,
+        "fitness": 61.066611957824854
+    },
+    {
+        "distance": 872.3168684498751,
+        "healt": 0.0,
+        "kill_amount": 0.0,
+        "fitness": 46.70851816048875
+    }
+]
