@@ -1,18 +1,19 @@
+import numpy as np
 from models.genome import Genome
 
 
 class Individual():
     def __init__(self):
-        self.__genomes: list[Genome] = []
+        self.__genome: np.ndarray = np.array([])
         self.__fitness = 0.0
         
     @property
-    def genomes(self) -> list[Genome]:
-        return self.__genomes
+    def genome(self) -> np.ndarray:
+        return self.__genome
     
-    @genomes.setter
-    def genomes(self, genomes: list[Genome]) -> None :
-        self.__genomes = genomes
+    @genome.setter
+    def genome(self, genome: np.ndarray) -> None :
+        self.__genome = genome
 
     @property
     def fitness(self)-> float:

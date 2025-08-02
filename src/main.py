@@ -100,99 +100,109 @@ def generate_info_vector(game_interface: GameInterface, player: GameElement, ele
 
     return np.array(episode_info_vector).reshape(-1, 1)
 
-def create_initial_population(game_interface: GameInterface, simple_nn: SimpleNN, valids_moves: list[Movement]) -> tuple[list[Individual], list[IndividualInfo]]:
+def create_initial_population(simple_nn: SimpleNN, rng: np.random.Generator) -> list[Individual]:
     population: list[Individual] = []
-    population_info: list[IndividualInfo] = []
     for _ in range(POPULATION_SIZE):
-        game_interface.start_episode()
         individual = Individual()
+        # CORREÇÃO: Use .genome, que agora está padronizado
+        individual.genome = rng.standard_normal(simple_nn.get_weights().shape)
+        population.append(individual)
+    return population
+
+def evaluate_population(game_interface: GameInterface, population: list[Individual], simple_nn: SimpleNN, valids_moves: list[Movement]) -> tuple[list[Individual], list[IndividualInfo]]:
+    """
+    Avalia cada indivíduo da população, atualiza seu fitness e coleta as métricas.
+    """
+    population_metrics = []
+    for individual in population:
+        # Configura a rede com o genoma (pesos) do indivíduo
+        simple_nn.set_weights(individual.genome)
+        
+        game_interface.start_episode()
         while not game_interface.episode_is_finished():
             elements, player = game_interface.get_visible_elements()
             input_vector = generate_info_vector(game_interface, player, elements)
             output = simple_nn.forward(input_vector)
-            genome = Mapper.neural_output_to_moviment(output, valids_moves)
-            genome.neural_output = output
-            individual.inc_genome(genome)
-            game_interface.make_action(genome.movement)
-        individual_info = game_interface.individual_info()
-        population_info.append(individual_info)
+            movement = Mapper.neural_output_to_moviment(output, valids_moves).movement
+            game_interface.make_action(movement)
+        
+        # Atualiza o fitness do indivíduo (a lista de população é modificada por referência)
         individual.fitness = game_interface.get_fitness()
-        population.append(individual)
-
-    return population, population_info
-
-def evaluate_mutated_individuals(game_interface: GameInterface, new_generation: list[Individual]) -> tuple[list[Individual], list[IndividualInfo]]:
-    population_info: list[IndividualInfo] = []
-    for individual in new_generation:
-        game_interface.start_episode()
-        for genome in individual.genomes:
-            if game_interface.episode_is_finished():
-                individual_info = game_interface.individual_info()
-                population_info.append(individual_info)
-                break
-            game_interface.make_action(genome.movement)
-        individual.fitness = game_interface.get_fitness()
-    return new_generation, population_info
+        
+        # Coleta as métricas detalhadas para este indivíduo
+        population_metrics.append(game_interface.individual_info())
+        
+    # Retorna a população (com fitness atualizado) e as métricas coletadas
+    return population, population_metrics
 
 if __name__ == "__main__":
-
     rng = np.random.default_rng(seed=42)
     moviments = all_valid_moviments()
     genetic = Genetic(ELITISM_COUNT, POPULATION_SIZE, TOURNAMENT_SIZE, MUTATION_RATE, moviments, rng)
     simple_nn = SimpleNN(NEURAL_INPUTS, HIDDEN_SIZE, 9, rng)
-    best_fitness_overall = -float('inf')
-    generations_without_improvement = 0
     game_interface = initialize_game()
 
-    fitness_history: list[int] = []
+    # Dicionário para armazenar o histórico de métricas de todas as gerações
+    populations_metrics_history: dict[int, list[IndividualInfo]] = {}
     
-    print(f"Avaliando {POPULATION_SIZE} indivíduos da população Zero...")
+    # 1. CRIE a população inicial
+    print("Criando a população inicial...")
+    individuals = create_initial_population(simple_nn, rng)
+    
+    # 2. AVALIE a população inicial (Geração 0)
+    print("Avaliando a população inicial (Geração 0)...")
     start_time_eval = time.time()
-    populations_info: dict[int, IndividualInfo] = {}
-    individuals, population_info = create_initial_population(game_interface, simple_nn, moviments)
-    populations_info[0] = population_info
+    individuals, metrics = evaluate_population(game_interface, individuals, simple_nn, moviments)
+    populations_metrics_history[0] = metrics
     eval_time = time.time() - start_time_eval
-    print(f"Avaliação concluída em {eval_time:.2f}s.")
-
-    sorted_population = sorted(individuals, key=lambda x: x.fitness, reverse=True)
-    current_best_fitness = sorted_population[0].fitness
-    fitness_history.append(current_best_fitness)
-    print(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
-
-    population = 1
+    print(f"Avaliação da Geração 0 concluída em {eval_time:.2f}s.")
+    
+    population_count = 1
+    best_fitness_overall = -float('inf')
+    generations_without_improvement = 0
+    
+    # Loop de evolução
     while True:
+        sorted_population = sorted(individuals, key=lambda x: x.fitness, reverse=True)
+        current_best_fitness = sorted_population[0].fitness
+        print(f"Melhor Fitness da Geração {population_count - 1}: {current_best_fitness:.2f}")
+
+        # Lógica de melhoria e critério de parada
         if current_best_fitness > best_fitness_overall + IMPROVEMENT_THRESHOLD:
             best_fitness_overall = current_best_fitness
             generations_without_improvement = 0
-            print(f"✨ Nova melhoria significativa encontrada! Melhor fitness geral: {best_fitness_overall:.2f}")
+            print(f"✨ Nova melhoria! Melhor fitness geral: {best_fitness_overall:.2f}")
         else:
             generations_without_improvement += 1
-            print(f"Sem melhoria significativa. Gerações estagnadas: {generations_without_improvement}/{STAGNATION_LIMIT}")
 
         if generations_without_improvement >= STAGNATION_LIMIT:
             print(f"CRITÉRIO DE PARADA ATINGIDO: Ausência de melhoria por {STAGNATION_LIMIT} gerações.")
             break
-        individuals = genetic.generate_new_population(sorted_population)
-        print(f"Avaliando {POPULATION_SIZE} indivíduos da população {population}...")
-        start_time_eval = time.time()
-        individuals, population_info = evaluate_mutated_individuals(game_interface, individuals)
-        populations_info[population] = population_info
-        eval_time = time.time() - start_time_eval
-        population += 1
-        sorted_population = sorted(individuals, key=lambda x: x.fitness, reverse=True)
-        current_best_fitness = sorted_population[0].fitness
-        fitness_history.append(current_best_fitness)
-        print(f"Melhor Fitness da Geração: {current_best_fitness:.2f}")
 
-    print('salvando resultados...')
-    for key, value in populations_info.items():
-        dict_info = [asdict(r) for r in value]
+        # 3. GERE a nova população a partir da anterior
+        individuals = genetic.generate_new_population(sorted_population)
+        
+        # 4. AVALIE a nova geração
+        print(f"Avaliando {len(individuals)} indivíduos da Geração {population_count}...")
+        start_time_eval = time.time()
+        individuals, metrics = evaluate_population(game_interface, individuals, simple_nn, moviments)
+        populations_metrics_history[population_count] = metrics
+        eval_time = time.time() - start_time_eval
+        print(f"Avaliação concluída em {eval_time:.2f}s.")
+        
+        population_count += 1
+    
+    # Lógica para salvar os resultados (como no seu código original)
+    print('Salvando resultados...')
+    for gen_num, metrics_list in populations_metrics_history.items():
+        dict_info = [asdict(r) for r in metrics_list]
+        # O caminho do diretório 'docs' um nível acima do 'src'
         doc_dir = Path(__file__).resolve().parent.parent / 'docs'
         doc_dir.mkdir(exist_ok=True)
-        with open(doc_dir / f'results_gen_{key}.json', 'w', encoding='utf-8') as f:
+        with open(doc_dir / f'results_gen_{gen_num}.json', 'w', encoding='utf-8') as f:
             json.dump(dict_info, f, ensure_ascii=False, indent=4)
+
     print("\n" + "="*50)
     print("Evolução finalizada.")
-
     game_interface.close()
     print("Instância do jogo finalizada. Processo concluído.")
