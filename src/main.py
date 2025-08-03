@@ -21,7 +21,7 @@ MOVEMENT_LIMIT = 4500
 
 
 SCENARIO_PATH = "deadly_corridor.cfg"
-POPULATION_SIZE = 10 
+POPULATION_SIZE = 50 
 
 W_KILLS = 150.0
 W_HEALTH = 1.0
@@ -32,12 +32,12 @@ DAMAGE_TAKEN = -0.5
 MISSING_SHOT = -0.8
 GAME_PROGRESS = 0.4
 
-STAGNATION_LIMIT = 1
+STAGNATION_LIMIT = 4
 IMPROVEMENT_THRESHOLD = 0.1
 
 CONVERGENCE = 10
 
-ELITISM_COUNT = 3
+ELITISM_COUNT = 1
 TOURNAMENT_SIZE = 3 
 MUTATION_RATE = 0.5 
 
@@ -136,6 +136,7 @@ def evaluate_population(game_interface: GameInterface, population: list[Individu
         
         # Coleta as métricas detalhadas para este indivíduo
         population_metrics.append(game_interface.individual_info())
+        individual.info = game_interface.individual_info()
         
     # Retorna a população (com fitness atualizado) e as métricas coletadas
     return population, population_metrics
@@ -166,6 +167,7 @@ if __name__ == "__main__":
     start_time_eval = time.time()
     individuals, metrics = evaluate_population(game_interface, individuals, simple_nn, moviments)
     populations_metrics_history[0] = metrics
+
     eval_time = time.time() - start_time_eval
     print(f"Avaliação da Geração 0 concluída em {eval_time:.2f}s.")
     
@@ -199,26 +201,36 @@ if __name__ == "__main__":
             break
 
         # 3. GERE a nova população a partir da anterior
-        individuals = genetic.generate_new_population(sorted_population)
+        elite_individuals = sorted_population[:ELITISM_COUNT]
+        elite_metrics = [game_interface.individual_info() for _ in elite_individuals]
+        temporary_population = genetic.generate_new_population(sorted_population)
+        children_to_evaluate = temporary_population[ELITISM_COUNT:]
         
         # 4. AVALIE a nova geração
-        print(f"Avaliando {len(individuals)} indivíduos da Geração {population_count}...")
-        start_time_eval = time.time()
-        individuals, metrics = evaluate_population(game_interface, individuals, simple_nn, moviments)
-        populations_metrics_history[population_count] = metrics
-        eval_time = time.time() - start_time_eval
-        print(f"Avaliação concluída em {eval_time:.2f}s.")
-        
+        if children_to_evaluate:
+            print(f"Avaliando {len(children_to_evaluate)} novos indivíduos da Geração {population_count}...")
+            start_time_eval = time.time()
+            
+            # Renomeado 'metrics' para 'children_metrics' para maior clareza
+            evaluated_children, children_metrics = evaluate_population(game_interface, children_to_evaluate, simple_nn, moviments)
+            
+            eval_time = time.time() - start_time_eval
+            print(f"Avaliação concluída em {eval_time:.2f}s.")
+        else:
+            evaluated_children = []
+            children_metrics = []
+
+        # Extrai as métricas da elite, que já estão salvas em cada indivíduo da avaliação anterior.
+        elite_metrics = [ind.info for ind in elite_individuals]
+
+        # Combina as métricas da elite (da geração passada) com as dos filhos (da geração atual).
+        all_metrics_for_this_generation = elite_metrics + children_metrics
+        populations_metrics_history[population_count] = all_metrics_for_this_generation
+
         population_count += 1
     
     # Lógica para salvar os resultados (como no seu código original)
     print('Salvando resultados...')
-
-    if SHOW_GAME_SCREEN:
-        input(f"Digite sair para fechar o jogo...")
-
-    if plot:
-        plot.close()
 
     doc_dir = Path(__file__).resolve().parent.parent / 'docs'
     plot_dir = Path(__file__).resolve().parent.parent / 'plots'
@@ -238,5 +250,13 @@ if __name__ == "__main__":
     result_manager.secondary_mean_evolutuion()
     print("\n" + "="*50)
     print("Evolução finalizada.")
+
+    if SHOW_GAME_SCREEN:
+        input(f"Digite sair para fechar o jogo...")
+
+    if plot:
+        plot.close()
+
     game_interface.close()
+
     print("Instância do jogo finalizada. Processo concluído.")
