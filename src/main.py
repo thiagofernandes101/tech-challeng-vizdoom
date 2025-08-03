@@ -12,6 +12,7 @@ import numpy as np
 from models.game_element import GameElement
 from models.individual_info import IndividualInfo
 from models.result_manager import ResultManager
+from models.real_time_plot import RealTimePlot
 from utils.mapper import Mapper
 from utils.simple_nn import SimpleNN
 from utils.genetic import Genetic
@@ -20,7 +21,7 @@ MOVEMENT_LIMIT = 4500
 
 
 SCENARIO_PATH = "deadly_corridor.cfg"
-POPULATION_SIZE = 100 
+POPULATION_SIZE = 10 
 
 W_KILLS = 150.0
 W_HEALTH = 1.0
@@ -43,10 +44,10 @@ MUTATION_RATE = 0.5
 NEURAL_INPUTS = 40
 HIDDEN_SIZE = 222
 
-def initialize_game() -> GameInterface:
+def initialize_game(show_screen: bool) -> GameInterface:
     """Cria e configura a instância do jogo ViZDoom."""
     print("Inicializando ViZDoom...")
-    return GameInterface(SCENARIO_PATH)
+    return GameInterface(SCENARIO_PATH, show_screen=show_screen)
 
 def all_valid_moviments() -> list[Movement]:
     movimentos_validos = []
@@ -97,10 +98,12 @@ def generate_info_vector(game_interface: GameInterface, player: GameElement, ele
         episode_info_vector.append(type_value / 10)
 
     final_vector = episode_info_vector[:NEURAL_INPUTS]
-    if len(episode_info_vector) < NEURAL_INPUTS:
-        episode_info_vector += [0.0] * (NEURAL_INPUTS - len(final_vector))
+    padding_needed = NEURAL_INPUTS - len(final_vector)
+    
+    if padding_needed > 0:
+        final_vector += [0.0] * padding_needed
 
-    return np.array(episode_info_vector).reshape(-1, 1)
+    return np.array(final_vector).reshape(-1, 1)
 
 def create_initial_population(simple_nn: SimpleNN, rng: np.random.Generator) -> list[Individual]:
     population: list[Individual] = []
@@ -138,11 +141,18 @@ def evaluate_population(game_interface: GameInterface, population: list[Individu
     return population, population_metrics
 
 if __name__ == "__main__":
+    SHOW_GAME_SCREEN = True
+
     rng = np.random.default_rng(seed=42)
     moviments = all_valid_moviments()
     genetic = Genetic(ELITISM_COUNT, POPULATION_SIZE, TOURNAMENT_SIZE, MUTATION_RATE, moviments, rng)
     simple_nn = SimpleNN(NEURAL_INPUTS, HIDDEN_SIZE, 9, rng)
-    game_interface = initialize_game()
+    game_interface = initialize_game(show_screen=SHOW_GAME_SCREEN)
+
+    plot = None
+    if SHOW_GAME_SCREEN:
+        print("Inicializando o gráfico de fitness em tempo real...")
+        plot = RealTimePlot()
 
     # Dicionário para armazenar o histórico de métricas de todas as gerações
     populations_metrics_history: dict[int, list[IndividualInfo]] = {}
@@ -165,9 +175,16 @@ if __name__ == "__main__":
     
     # Loop de evolução
     while True:
+        if plot and not plot.handle_events():
+            running = False
+            continue
+
         sorted_population = sorted(individuals, key=lambda x: x.fitness, reverse=True)
         current_best_fitness = sorted_population[0].fitness
         print(f"Melhor Fitness da Geração {population_count - 1}: {current_best_fitness:.2f}")
+
+        if plot:
+            plot.update_data(current_best_fitness)
 
         # Lógica de melhoria e critério de parada
         if current_best_fitness > best_fitness_overall + IMPROVEMENT_THRESHOLD:
@@ -197,8 +214,16 @@ if __name__ == "__main__":
     # Lógica para salvar os resultados (como no seu código original)
     print('Salvando resultados...')
 
+    if SHOW_GAME_SCREEN:
+        input(f"Digite sair para fechar o jogo...")
+
+    if plot:
+        plot.close()
+
     doc_dir = Path(__file__).resolve().parent.parent / 'docs'
     plot_dir = Path(__file__).resolve().parent.parent / 'plots'
+    doc_dir.mkdir(exist_ok=True, parents=True)
+    plot_dir.mkdir(exist_ok=True, parents=True)
 
     for gen_num, metrics_list in populations_metrics_history.items():
         dict_info = [asdict(r) for r in metrics_list]
