@@ -1,0 +1,86 @@
+[
+    {
+        "distance": 685.3552613413566,
+        "healt": 0.0,
+        "kill_amount": 1.0,
+        "fitness": 36.881973520722084
+    },
+    {
+        "distance": 919.6624247577811,
+        "healt": 0.0,
+        "kill_amount": 1.0,
+        "fitness": 66.7696182282003
+    },
+    {
+        "distance": 946.828091483919,
+        "healt": -4.0,
+        "kill_amount": 2.0,
+        "fitness": 70.61452823355272
+    },
+    {
+        "distance": 1017.8831384397074,
+        "healt": -6.0,
+        "kill_amount": 0.0,
+        "fitness": 50.60948245957367
+    },
+    {
+        "distance": 911.4587123547964,
+        "healt": -12.0,
+        "kill_amount": 0.0,
+        "fitness": 33.63128411193167
+    },
+    {
+        "distance": 931.2254905144368,
+        "healt": -6.0,
+        "kill_amount": 1.0,
+        "fitness": 50.010294146299316
+    },
+    {
+        "distance": 973.0153428366782,
+        "healt": -8.0,
+        "kill_amount": 1.0,
+        "fitness": 43.57138085530103
+    },
+    {
+        "distance": 889.6727487860103,
+        "healt": 0.0,
+        "kill_amount": 2.0,
+        "fitness": 80.87054739074092
+    },
+    {
+        "distance": 998.7485469898556,
+        "healt": -10.0,
+        "kill_amount": 1.0,
+        "fitness": 54.487369229087
+    },
+    {
+        "distance": 661.7812637415125,
+        "healt": -10.0,
+        "kill_amount": 0.0,
+        "fitness": 13.760313736736123
+    },
+    {
+        "distance": 687.4658203241813,
+        "healt": -6.0,
+        "kill_amount": 0.0,
+        "fitness": 22.871923829176325
+    },
+    {
+        "distance": 917.6955235414937,
+        "healt": -4.0,
+        "kill_amount": 1.0,
+        "fitness": 51.19259711873443
+    },
+    {
+        "distance": 970.6895940268655,
+        "healt": 0.0,
+        "kill_amount": 2.0,
+        "fitness": 83.5620634624179
+    },
+    {
+        "distance": 940.1818272888033,
+        "healt": -4.0,
+        "kill_amount": 2.0,
+        "fitness": 87.8163644559923
+    }
+]

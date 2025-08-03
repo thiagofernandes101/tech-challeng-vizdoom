@@ -11,6 +11,7 @@ from models.genome import Genome
 import numpy as np
 from models.game_element import GameElement
 from models.individual_info import IndividualInfo
+from models.result_manager import ResultManager
 from utils.mapper import Mapper
 from utils.simple_nn import SimpleNN
 from utils.genetic import Genetic
@@ -45,7 +46,7 @@ HIDDEN_SIZE = 222
 def initialize_game() -> GameInterface:
     """Cria e configura a instância do jogo ViZDoom."""
     print("Inicializando ViZDoom...")
-    return GameInterface(SCENARIO_PATH, True)
+    return GameInterface(SCENARIO_PATH)
 
 def all_valid_moviments() -> list[Movement]:
     movimentos_validos = []
@@ -95,8 +96,9 @@ def generate_info_vector(game_interface: GameInterface, player: GameElement, ele
         type_value = ELEMENT_TYPE_MAP.get(element_class_name, 0)
         episode_info_vector.append(type_value / 10)
 
+    final_vector = episode_info_vector[:NEURAL_INPUTS]
     if len(episode_info_vector) < NEURAL_INPUTS:
-        episode_info_vector += [0.0] * (NEURAL_INPUTS - len(episode_info_vector))
+        episode_info_vector += [0.0] * (NEURAL_INPUTS - len(final_vector))
 
     return np.array(episode_info_vector).reshape(-1, 1)
 
@@ -194,14 +196,21 @@ if __name__ == "__main__":
     
     # Lógica para salvar os resultados (como no seu código original)
     print('Salvando resultados...')
+
+    doc_dir = Path(__file__).resolve().parent.parent / 'docs'
+    plot_dir = Path(__file__).resolve().parent.parent / 'plots'
+
     for gen_num, metrics_list in populations_metrics_history.items():
         dict_info = [asdict(r) for r in metrics_list]
-        # O caminho do diretório 'docs' um nível acima do 'src'
         doc_dir = Path(__file__).resolve().parent.parent / 'docs'
         doc_dir.mkdir(exist_ok=True)
         with open(doc_dir / f'results_gen_{gen_num}.json', 'w', encoding='utf-8') as f:
             json.dump(dict_info, f, ensure_ascii=False, indent=4)
-
+    print('gerando gráficos')
+    result_manager = ResultManager(doc_dir, plot_dir, 'results_gen_*.json')
+    result_manager.mean_fitness()
+    result_manager.distance_vs_kill()
+    result_manager.secondary_mean_evolutuion()
     print("\n" + "="*50)
     print("Evolução finalizada.")
     game_interface.close()
