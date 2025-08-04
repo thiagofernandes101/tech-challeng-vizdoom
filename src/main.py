@@ -1,6 +1,7 @@
 from dataclasses import asdict
 from itertools import product
 import json
+import math
 from pathlib import Path
 import time
 from typing import List
@@ -13,6 +14,7 @@ from models.game_element import GameElement
 from models.individual_info import IndividualInfo
 from models.result_manager import ResultManager
 from models.real_time_plot import RealTimePlot
+from utils.calc import Calc
 from utils.mapper import Mapper
 from utils.simple_nn import SimpleNN
 from utils.genetic import Genetic
@@ -21,7 +23,7 @@ MOVEMENT_LIMIT = 4500
 
 
 SCENARIO_PATH = "deadly_corridor.cfg"
-POPULATION_SIZE = 50 
+POPULATION_SIZE = 50
 
 W_KILLS = 150.0
 W_HEALTH = 1.0
@@ -32,7 +34,7 @@ DAMAGE_TAKEN = -0.5
 MISSING_SHOT = -0.8
 GAME_PROGRESS = 0.4
 
-STAGNATION_LIMIT = 4
+STAGNATION_LIMIT = 1000
 IMPROVEMENT_THRESHOLD = 0.1
 
 CONVERGENCE = 10
@@ -41,7 +43,7 @@ ELITISM_COUNT = 1
 TOURNAMENT_SIZE = 3 
 MUTATION_RATE = 0.5 
 
-NEURAL_INPUTS = 40
+NEURAL_INPUTS = 42
 HIDDEN_SIZE = 222
 
 def initialize_game(show_screen: bool) -> GameInterface:
@@ -96,6 +98,20 @@ def generate_info_vector(game_interface: GameInterface, player: GameElement, ele
         element_class_name = type(element).__name__
         type_value = ELEMENT_TYPE_MAP.get(element_class_name, 0)
         episode_info_vector.append(type_value / 10)
+        
+        nearest_enemy = elements[0]
+        dist_to_enemy = Calc.get_distance_between_elements(player, nearest_enemy)
+        episode_info_vector.append(dist_to_enemy / 1000.0) # Normalizar
+
+        # 2. Ângulo relativo ao inimigo
+        dx = nearest_enemy.pos_x - player.pos_x
+        dy = nearest_enemy.pos_y - player.pos_y
+        angle_to_enemy = math.degrees(math.atan2(dy, dx))
+        relative_angle = player.angle - angle_to_enemy
+
+        # Normalizar o ângulo para estar entre -1 e 1
+        relative_angle = (relative_angle + 180) % 360 - 180 
+        episode_info_vector.append(relative_angle / 180.0)
 
     final_vector = episode_info_vector[:NEURAL_INPUTS]
     padding_needed = NEURAL_INPUTS - len(final_vector)
@@ -119,7 +135,7 @@ def evaluate_population(game_interface: GameInterface, population: list[Individu
     Avalia cada indivíduo da população, atualiza seu fitness e coleta as métricas.
     """
     population_metrics = []
-    for individual in population:
+    for i, individual in enumerate(population):
         # Configura a rede com o genoma (pesos) do indivíduo
         simple_nn.set_weights(individual.genome)
         
@@ -151,9 +167,9 @@ if __name__ == "__main__":
     game_interface = initialize_game(show_screen=SHOW_GAME_SCREEN)
 
     plot = None
-    if SHOW_GAME_SCREEN:
-        print("Inicializando o gráfico de fitness em tempo real...")
-        plot = RealTimePlot()
+    # if SHOW_GAME_SCREEN:
+    print("Inicializando o gráfico de fitness em tempo real...")
+    plot = RealTimePlot()
 
     # Dicionário para armazenar o histórico de métricas de todas as gerações
     populations_metrics_history: dict[int, list[IndividualInfo]] = {}
@@ -221,11 +237,9 @@ if __name__ == "__main__":
             children_metrics = []
 
         # Extrai as métricas da elite, que já estão salvas em cada indivíduo da avaliação anterior.
-        elite_metrics = [ind.info for ind in elite_individuals]
-
-        # Combina as métricas da elite (da geração passada) com as dos filhos (da geração atual).
         all_metrics_for_this_generation = elite_metrics + children_metrics
         populations_metrics_history[population_count] = all_metrics_for_this_generation
+        individuals = elite_individuals + evaluated_children
 
         population_count += 1
     
@@ -251,8 +265,7 @@ if __name__ == "__main__":
     print("\n" + "="*50)
     print("Evolução finalizada.")
 
-    if SHOW_GAME_SCREEN:
-        input(f"Digite sair para fechar o jogo...")
+    input(f"Digite sair para fechar o jogo...")
 
     if plot:
         plot.close()

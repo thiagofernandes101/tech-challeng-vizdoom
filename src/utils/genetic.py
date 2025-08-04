@@ -25,7 +25,7 @@ class Genetic():
             parent2 = self.__tournament_selection(old_population)
 
             # Crossover e mutação nos genomas (pesos)
-            child_1_genome, child_2_genome = self.__one_point_crossover(parent1.genome, parent2.genome)
+            child_1_genome, child_2_genome = self.__blended_crossover(parent1.genome, parent2.genome)
             child_1_genome = self.__mutate(child_1_genome)
             child_2_genome = self.__mutate(child_2_genome)
 
@@ -46,16 +46,12 @@ class Genetic():
         winner = max(tournament_competitors, key=lambda x: x.fitness)
         return winner
     
-    def __one_point_crossover(self, parent_1_genome: np.ndarray, parent_2_genome: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        size = parent_1_genome.size
-        if size < 2:
-            return parent_1_genome.copy(), parent_2_genome.copy()
+    def __blended_crossover(self, parent_1_genome: np.ndarray, parent_2_genome: np.ndarray, alpha: float = 0.5) -> tuple[np.ndarray, np.ndarray]:
+        # Gera um fator de mistura aleatório para cada gene
+        blend = self.__rng.uniform(low=-alpha, high=1+alpha, size=parent_1_genome.shape)
 
-        crossover_point = self.__rng.integers(1, size)
-
-        # CORREÇÃO: child_2 usava a mesma combinação do child_1
-        child1_genome = np.concatenate([parent_1_genome[:crossover_point], parent_2_genome[crossover_point:]])
-        child2_genome = np.concatenate([parent_2_genome[:crossover_point], parent_1_genome[crossover_point:]])
+        child1_genome = blend * parent_1_genome + (1 - blend) * parent_2_genome
+        child2_genome = (1 - blend) * parent_1_genome + blend * parent_2_genome
 
         return child1_genome, child2_genome
 

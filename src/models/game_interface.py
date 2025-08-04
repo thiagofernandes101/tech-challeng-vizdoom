@@ -13,6 +13,7 @@ class GameInfo(Enum):
     KILL_COUNT = vzd.GameVariable.KILLCOUNT
     DAMAGE_TAKEN = vzd.GameVariable.DAMAGE_TAKEN
     WEAPON_AMMO = vzd.GameVariable.SELECTED_WEAPON_AMMO
+    POSITION_X = vzd.GameVariable.POSITION_X
 
 class GameInterface():
 
@@ -21,17 +22,26 @@ class GameInterface():
         self.__configure_screen(scenario_path, show_screen)        
         self.__configure_buttons()
         self.__game.set_mode(vzd.Mode.PLAYER)
+        self.__game.set_depth_buffer_enabled(True)
+        self.__game.set_labels_buffer_enabled(True)
         self.__game.set_available_game_variables([
             vzd.POSITION_X,
             vzd.POSITION_Y,
             vzd.ANGLE,
             vzd.POSITION_Z
         ])
+        self.__game.set_seed(42)
         self.__game.set_doom_skill(1)
         self.__game.init()
         self.__target_x = 1312.00
         self.__target_y = 0.0
         self.__wrong_shot = 0
+        self.__checkpoints = [
+            (300.0, 200.0),
+            (600.0, 300.0),
+            (900.0, 400.0),
+            (1200.0, 600.0)
+        ]
 
     def get_avaliable_buttons_amount(self) -> int:
         return self.__game.get_available_buttons_size()
@@ -58,22 +68,27 @@ class GameInterface():
         return self.__individual_info
 
     def get_fitness(self)-> float:
-        if self.get_state_info(GameInfo.KILL_COUNT) >= 2 :
-            print(f'kills: {self.get_state_info(GameInfo.KILL_COUNT)}')
-        if self.__distance - self.__current_distance > 700:
-            print(f'distancia percorrida: {self.__distance - self.__current_distance}')
-        print(f'vida: {self.get_state_info(GameInfo.HEALTH)}')
-        print(f'tiros errados: {self.__wrong_shot}')
-        return (
+        checkpoint_bonus = 0.0
+        final_x_pos = self.get_state_info(GameInfo.POSITION_X)
+        for checkpoint_x, bonus_value in self.__checkpoints:
+            # Se a posição final do jogador ultrapassou o checkpoint...
+            if final_x_pos >= checkpoint_x:
+                checkpoint_bonus = bonus_value
+            else:
+                break
+
+        base_fitness = (
             (6.0 * self.get_state_info(GameInfo.KILL_COUNT)) +
             (1.0 * self.get_state_info(GameInfo.HEALTH)) +
             (0.4 * self.get_state_info(GameInfo.WEAPON_AMMO)) +
             (0.5 * self.get_state_info(GameInfo.ITEMS_COUNT)) +
             (1.0 * self.get_state_info(GameInfo.DAMAGE_COUNT)) +
             (-0.5 * self.get_state_info(GameInfo.DAMAGE_TAKEN)) +
-            (-0.2 * self.__wrong_shot) +
-            (0.09 * (self.__distance - self.__current_distance))
+            (-0.5 * self.__wrong_shot) +
+            (3.0 * (self.__distance - self.__current_distance))
         )
+
+        return base_fitness + checkpoint_bonus
 
     def get_state_info(self, info: GameInfo)-> float:
         return self.__game.get_game_variable(info.value)
@@ -130,7 +145,7 @@ class GameInterface():
             self.__wrong_shot +=1
 
         if self.__game.get_state():
-            self.__current_distance = Calc.distance(self.__game.get_state().game_variables[0], self.__game.get_state().game_variables[1], self.__target_x, self.__target_y)  
+            self.__current_distance = Calc.distance(self.__game.get_state().game_variables[0], self.__game.get_state().game_variables[1], self.__target_x, self.__target_y)
 
     def close(self) -> None:
         self.__game.close()

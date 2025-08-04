@@ -8,51 +8,52 @@ Este projeto utiliza o [ViZDoom](https://vizdoom.farama.org/) em conjunto com o 
 Este projeto utiliza um algoritmo genético para treinar um agente a jogar Doom. Abaixo estão os principais componentes do processo evolutivo:
 
 **1. O que está sendo otimizado?**
-A melhor sequência de ações para alcançar um objetivo específico no ambiente do jogo matando a maior quantidade de inimigos com o menor dano
+
+Otimiza os pesos e biases de uma rede neural simples. Essa rede neural funciona como o "cérebro" do agente, recebendo informações do estado do jogo (como vida, munição, posição de inimigos) em tempo real e decidindo qual ação tomar a cada momento. O objetivo é evoluir um cérebro que maximize o desempenho no jogo.
 
 **2. Representação da solução (genoma)**
 
-Sequência de ações representando comandos do jogo ao longo do tempo.
+Um vetor (array NumPy) de números de ponto flutuante que representa todos os pesos e biases da rede neural, concatenados em uma única estrutura de dados.
 
 **3. Função de fitness**
 
-Combina desempenho ofensivo, exploração e eficiência temporal.
+A função de fitness, presente no arquivo game_interface.py, é uma fórmula complexa que recompensa e penaliza várias ações para medir o desempenho de um indivíduo em um episódio. A fórmula é:
 
-```python
-Fitness = (wk * Kills)+(wh * Healthfinal)−(ws * Steps)
-```
-Exemplo:
-- w_kills = 100
-- w_health = 10
-- w_steps = 0.5
+>Fitness Base = (6.0 * Kills) + (1.0 * Vida) + (0.4 * Munição) + (0.5 * Itens Coletados) + (1.0 * Dano Causado) - (0.5 * Dano Recebido) - (0.5 * Tiros Errados) + (3.0 * Progresso no Mapa)
+
+Além disso, o agente recebe um bônus de fitness significativo ao cruzar checkpoints pré-definidos no mapa, incentivando a exploração e o avanço.
 
 **4. Método de seleção**
 
-Torneio favorecendo indivíduos com maior fitness.
+O método utilizado é a Seleção por Torneio. Um número específico de indivíduos (TOURNAMENT_SIZE) é selecionado aleatoriamente da população, e o que possuir o maior fitness entre eles é escolhido como "pai" para a próxima geração.
 
 **5. Crossover**
 
-Crossover de um Ponto:
-
-- Escolha um ponto de corte aleatório ao longo do genoma.
-- Crie um filho pegando a primeira parte do genoma do Pai A e a segunda parte do Pai B.
-- O segundo filho pode ser criado com as partes restantes.
-
-> Pai A: [A, A, A, A | A, A, A, A]
-> 
-> Pai B: [B, B, B, B | B, B, B, B]
-> 
-> Filho 1: [A, A, A, A | B, B, B, B]
-> 
-> Filho 2: [B, B, B, B | A, A, A, A]
+O código utiliza o Blended Crossover. Neste método, os genomas (vetores de pesos) de dois pais são combinados através de uma mistura ponderada. Para cada peso, um fator de mistura aleatório é gerado, e o novo peso do filho é uma combinação linear dos pesos dos pais, permitindo a criação de características intermediárias.
 
 **6. Inicialização**
 
-População inicial gerada com ações aleatórias dentro dos limites válidos do ambiente.
+A população inicial é criada gerando-se, para cada indivíduo, um genoma (vetor de pesos) com valores aleatórios amostrados de uma distribuição normal padrão. Isso significa que a primeira geração é composta por "cérebros" completamente aleatórios.
 
 **7. Critério de parada**
 
-Ausência de melhoria significativa no fitness após N gerações.
+O algoritmo para quando não há uma melhoria significativa no fitness do melhor indivíduo por um número definido de gerações (STAGNATION_LIMIT). Uma melhoria só é considerada "significativa" se for maior que um limiar pré-definido (IMPROVEMENT_THRESHOLD).
+
+---
+
+## 🧬 Explicação do Funcionamento do Algoritmo
+
+Este projeto utiliza um algoritmo genético para treinar um agente autônomo a jogar Doom. O diferencial desta abordagem é que não evoluímos uma sequência fixa de movimentos, mas sim o cérebro do agente, que é uma rede neural. Este cérebro aprende a tomar decisões em tempo real com base no que "vê" no jogo.
+
+O processo evolutivo, ilustrado pelo fluxograma abaixo, permite que o agente aprimore suas estratégias de combate e sobrevivência ao longo de várias gerações.
+
+```mermaid
+architecture-beta
+    service user(mdi:account)
+    service lambda(logos:aws-lambda)
+
+    user:R --> L:lambda
+```
 
 ---
 
