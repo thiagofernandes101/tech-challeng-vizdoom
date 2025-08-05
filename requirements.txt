@@ -8,10 +8,13 @@ kiwisolver==1.4.8
 matplotlib==3.10.3
 numpy==2.3.1
 packaging==25.0
+pandas==2.3.1
 pillow==11.3.0
 pygame==2.6.1
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
+pytz==2025.2
 six==1.17.0
 typing_extensions==4.14.1
+tzdata==2025.2
 vizdoom @ git+https://github.com/Farama-Foundation/ViZDoom@75c740a2d12f1d439473ab9af9d6861207017f8f

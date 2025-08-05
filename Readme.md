@@ -18,7 +18,7 @@ Um vetor (array NumPy) de números de ponto flutuante que representa todos os pe
 
 A função de fitness, presente no arquivo game_interface.py, é uma fórmula complexa que recompensa e penaliza várias ações para medir o desempenho de um indivíduo em um episódio. A fórmula é:
 
->Fitness Base = (6.0 * Kills) + (1.0 * Vida) + (0.4 * Munição) + (0.5 * Itens Coletados) + (1.0 * Dano Causado) - (0.5 * Dano Recebido) - (0.5 * Tiros Errados) + (3.0 * Progresso no Mapa)
+>Fitness Base = (6.0 * Kills) + (1.0 * Vida) + (0.4 * Munição) + (0.5 * Itens Coletados) + (1.0 * Dano Causado) + (-0.5 * Dano Recebido) + (-0.5 * Tiros Errados) + (3.0 * Progresso no Mapa)
 
 Além disso, o agente recebe um bônus de fitness significativo ao cruzar checkpoints pré-definidos no mapa, incentivando a exploração e o avanço.
 
