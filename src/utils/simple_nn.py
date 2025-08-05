@@ -16,12 +16,15 @@ class SimpleNN():
 
     def sigmoid(self, x: np.ndarray) -> np.ndarray:
         return 1 / (1 + np.exp(-x))
+    
+    def tanh(self, x: np.ndarray) -> np.ndarray:
+        return np.tanh(x)
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         z1 = np.dot(self.__w1, x) + self.__b1
-        a1 = self.sigmoid(z1)
+        a1 = self.tanh(z1) # Mudar aqui
         z2 = np.dot(self.__w2, a1) + self.__b2
-        a2 = self.sigmoid(z2)
+        a2 = self.tanh(z2) # Mudar aqui
         return a2
 
     def get_weights(self) -> np.ndarray:
